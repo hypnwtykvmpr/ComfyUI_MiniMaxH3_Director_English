@@ -23,7 +23,7 @@ def inject_video_latent(av_latent: dict, images: torch.Tensor, vae) -> dict:
     )
     if not is_nested:
         raise ValueError(
-            "FaceRefine 需要 MiniMax H3 联合 AV latent（NestedTensor）。"
+            "FaceRefine requires a MiniMax H3 joint AV latent (NestedTensor)."
         )
     members = list(samples.unbind())
     video_tmpl = members[0]
@@ -34,8 +34,8 @@ def inject_video_latent(av_latent: dict, images: torch.Tensor, vae) -> dict:
     got_t, got_h, got_w = encoded.shape[-3], encoded.shape[-2], encoded.shape[-1]
     if (got_h, got_w) != (tgt_h, tgt_w):
         raise ValueError(
-            f"FaceRefine 裁剪画布和 H3 latent 空间不一致：编码 {got_h}x{got_w}，"
-            f"期望 {tgt_h}x{tgt_w}。"
+            f"FaceRefine crop canvas does not match the H3 latent space: encoded {got_h}x{got_w}, "
+            f"expected {tgt_h}x{tgt_w}."
         )
     if got_t != tgt_t:
         if got_t > tgt_t:

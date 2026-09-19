@@ -17,7 +17,7 @@ REFINE_MODES = ("refine", "upscale", "latent_upscale")
 SEED_MODES = ("inherit", "offset")
 UPSCALE_METHODS = ("lanczos", "nvidia_rtx_vsr", "h3_latent")
 MAX_REFINE_PASSES = 9999
-# 海螺参考生视频二采：ManualSigmas 4 个数 = euler 3 步。
+# Hailuo reference-to-video second pass: ManualSigmas 4 values = euler 3 steps.
 HAILUO_REFINE_SIGMAS = (0.85, 0.7250, 0.4219, 0.0)
 DEFAULT_REFINE_SIGMA_SAMPLER = "euler"
 MAX_SPATIAL_TILES = 8
@@ -69,8 +69,8 @@ def parse_refine_sigmas(raw: Any, *, fallback: bool = False) -> tuple[float, ...
     if len(vals) < 2:
         if not fallback:
             raise ValueError(
-                "Refine SIGMAS 至少需要 2 个数（步数 + 结尾 0）。"
-                "请检查 BasicScheduler 的 steps / denoise。"
+                "Refine SIGMAS needs at least 2 values (steps + trailing 0)."
+                "Check BasicScheduler's steps / denoise."
             )
         return HAILUO_REFINE_SIGMAS
     if abs(vals[-1]) > 1e-8:
@@ -147,20 +147,20 @@ def latent_upscale_model_name(pack: dict[str, Any] | None) -> str:
     return str(pack.get("h3_latent_model") or "").strip()
 
 
-FOLLOW_DIRECTOR_ASPECT = "跟随导演台"
-CUSTOM_ASPECT_RATIO = "自定义"
+FOLLOW_DIRECTOR_ASPECT = "Follow Director"
+CUSTOM_ASPECT_RATIO = "Custom"
 DEFAULT_UPSCALE_MEGAPIXELS = 1.0
 
 # Same labels/ratios as Director output bar / official ResolutionSelector.
 RESOLUTION_ASPECTS = (
-    ("1:1 (方形)", 1, 1),
-    ("2:3 (竖版照片)", 2, 3),
-    ("3:2 (横版照片)", 3, 2),
-    ("3:4 (竖版标准)", 3, 4),
-    ("4:3 (标准)", 4, 3),
-    ("9:16 (竖屏)", 9, 16),
-    ("16:9 (宽屏)", 16, 9),
-    ("21:9 (超宽)", 21, 9),
+    ("1:1 (Square)", 1, 1),
+    ("2:3 (Portrait photo)", 2, 3),
+    ("3:2 (Landscape photo)", 3, 2),
+    ("3:4 (Portrait standard)", 3, 4),
+    ("4:3 (Standard)", 4, 3),
+    ("9:16 (Portrait)", 9, 16),
+    ("16:9 (Widescreen)", 16, 9),
+    ("21:9 (Ultrawide)", 21, 9),
 )
 
 ASPECT_RATIO_CHOICES = (
@@ -170,18 +170,26 @@ ASPECT_RATIO_CHOICES = (
 )
 
 _ASPECT_ALIASES = {
+    # Legacy Chinese labels (backward compatibility for saved workflows).
+    "跟随导演台": FOLLOW_DIRECTOR_ASPECT,
+    "自定义": CUSTOM_ASPECT_RATIO,
+    "自定义 (Custom)": CUSTOM_ASPECT_RATIO,
+    "1:1 (方形)": "1:1 (Square)",
+    "2:3 (竖版照片)": "2:3 (Portrait photo)",
+    "3:2 (横版照片)": "3:2 (Landscape photo)",
+    "3:4 (竖版标准)": "3:4 (Portrait standard)",
+    "4:3 (标准)": "4:3 (Standard)",
+    "9:16 (竖屏)": "9:16 (Portrait)",
+    "16:9 (宽屏)": "16:9 (Widescreen)",
+    "21:9 (超宽)": "21:9 (Ultrawide)",
+    # Older English aliases.
     "Follow Director": FOLLOW_DIRECTOR_ASPECT,
     "follow": FOLLOW_DIRECTOR_ASPECT,
     "Custom": CUSTOM_ASPECT_RATIO,
-    "自定义 (Custom)": CUSTOM_ASPECT_RATIO,
-    "1:1 (Square)": "1:1 (方形)",
-    "2:3 (Portrait Photo)": "2:3 (竖版照片)",
-    "3:2 (Photo)": "3:2 (横版照片)",
-    "3:4 (Portrait Standard)": "3:4 (竖版标准)",
-    "4:3 (Standard)": "4:3 (标准)",
-    "9:16 (Portrait Widescreen)": "9:16 (竖屏)",
-    "16:9 (Widescreen)": "16:9 (宽屏)",
-    "21:9 (Ultrawide)": "21:9 (超宽)",
+    "2:3 (Portrait Photo)": "2:3 (Portrait photo)",
+    "3:2 (Photo)": "3:2 (Landscape photo)",
+    "3:4 (Portrait Standard)": "3:4 (Portrait standard)",
+    "9:16 (Portrait Widescreen)": "9:16 (Portrait)",
 }
 
 
@@ -449,7 +457,7 @@ def normalize_refine_pack(
 
 
 def confirm_first_pass_enabled(plan) -> bool:
-    """True when Refine is connected and「先确认一采」is on."""
+    """True when Refine is connected and confirm-first-pass is on."""
     pack = getattr(plan, "refine", None)
     return isinstance(pack, dict) and bool(pack.get("enabled")) and bool(pack.get("confirm_first_pass"))
 
@@ -545,7 +553,7 @@ def refine_report_line(plan) -> str | None:
     n_passes = refine_passes_for(pack)
     pass_note = f", passes={n_passes}" if n_passes > 1 else ""
     model_note = (
-        ", 二采模型" if (pack.get("has_sample_model") or pack.get("sample_model") is not None) else ""
+        ", second-pass model" if (pack.get("has_sample_model") or pack.get("sample_model") is not None) else ""
     )
     wired = bool(pack.get("has_sigmas_tensor") or pack.get("sigmas_tensor") is not None)
     parsed = pack.get("sigmas_parsed") or ()
@@ -554,7 +562,7 @@ def refine_report_line(plan) -> str | None:
     if mode == "latent_upscale":
         line = f"Refine: ON ({mode}{model_note}{extra})"
     else:
-        how = f"sigmas {sampler}" if wired else "sigmas 未接线"
+        how = f"sigmas {sampler}" if wired else "sigmas not wired"
         step_note = f" {n_steps}-step" if n_steps else ""
         line = (
             f"Refine: ON ({mode}, {how}{step_note}"
@@ -565,5 +573,5 @@ def refine_report_line(plan) -> str | None:
             overlap = _clamp_tile_overlap(pack.get("tile_overlap"))
             line += f", spatial tiles {tile_count} overlap {overlap}px"
     if pack.get("confirm_first_pass"):
-        line += " — 先确认一采（无缓存只一采，有缓存则二采）"
+        line += " — confirm first pass (no cache: first pass only; cached: second pass)"
     return line

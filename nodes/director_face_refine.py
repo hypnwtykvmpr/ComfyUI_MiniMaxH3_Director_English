@@ -33,13 +33,13 @@ class MiniMaxH3DirectorFaceRefine:
         detectors = detector_choices()
         return {
             "required": {
-                "bd_grp_face_detect": ("BDGROUP", {"default": "脸部检测设置"}),
+                "bd_grp_face_detect": ("BDGROUP", {"default": "Face detection settings"}),
                 "detector": (
                     detectors,
                     {
                         "default": DEFAULT_DETECTOR if DEFAULT_DETECTOR in detectors else detectors[0],
                         "tooltip": (
-                            "人脸检测权重，放到 models/ultralytics/bbox/（如 face_yolov8m.pt）。"
+                            "Face detection weights; put them in models/ultralytics/bbox/ (e.g. face_yolov8m.pt)."
                         ),
                     },
                 ),
@@ -50,7 +50,7 @@ class MiniMaxH3DirectorFaceRefine:
                         "min": 0.05,
                         "max": 0.95,
                         "step": 0.05,
-                        "tooltip": "检测阈值。更低更容易抓住侧脸和小脸。",
+                        "tooltip": "Detection threshold. Lower values catch profile and small faces more easily.",
                     },
                 ),
                 "crop_factor": (
@@ -60,7 +60,7 @@ class MiniMaxH3DirectorFaceRefine:
                         "min": 1.2,
                         "max": 8.0,
                         "step": 0.1,
-                        "tooltip": "裁剪边长 = 脸高 × 该倍数。2.0–3.0 常用。",
+                        "tooltip": "Crop edge length = face height x this multiplier. 2.0-3.0 is typical.",
                     },
                 ),
                 "canvas_width": (
@@ -70,7 +70,7 @@ class MiniMaxH3DirectorFaceRefine:
                         "min": 128,
                         "max": 1344,
                         "step": 32,
-                        "tooltip": "H3 生成裁剪的宽度。manual 模式按此值。",
+                        "tooltip": "Width of the H3 generated crop. Used in manual mode.",
                     },
                 ),
                 "canvas_height": (
@@ -80,7 +80,7 @@ class MiniMaxH3DirectorFaceRefine:
                         "min": 128,
                         "max": 1344,
                         "step": 32,
-                        "tooltip": "H3 生成裁剪的高度。manual 模式按此值。",
+                        "tooltip": "Height of the H3 generated crop. Used in manual mode.",
                     },
                 ),
                 "canvas_mode": (
@@ -88,8 +88,8 @@ class MiniMaxH3DirectorFaceRefine:
                     {
                         "default": "manual",
                         "tooltip": (
-                            "manual = 使用上面宽高。"
-                            "auto_capped_768 = 按最大裁剪自适应，上限 768。"
+                            "manual = use the width/height above."
+                            "auto_capped_768 = adapt to the largest crop, capped at 768."
                         ),
                     },
                 ),
@@ -97,10 +97,10 @@ class MiniMaxH3DirectorFaceRefine:
                     list(SELECT_MODES),
                     {
                         "default": "largest_face",
-                        "tooltip": "锁定对象：最大脸，或最靠近画面中心的脸。锁定后按邻近框跟踪。",
+                        "tooltip": "Lock target: the largest face, or the one nearest the frame centre. Once locked, tracking follows the nearest box.",
                     },
                 ),
-                "bd_grp_face_sample": ("BDGROUP", {"default": "采样设置"}),
+                "bd_grp_face_sample": ("BDGROUP", {"default": "Sampling settings"}),
                 "denoise": (
                     "FLOAT",
                     {
@@ -109,8 +109,8 @@ class MiniMaxH3DirectorFaceRefine:
                         "max": 1.0,
                         "step": 0.01,
                         "tooltip": (
-                            "裁剪再采的 denoise（BasicScheduler）。H3 不要用 FaceDetailer 的 0.25；"
-                            "模板约 0.40。接了 sigmas 则忽略此项。"
+                            "Denoise for re-sampling the crop (BasicScheduler). Do not use FaceDetailer's 0.25 on H3; "
+                            "the template uses about 0.40. Ignored when the sigmas input is connected."
                         ),
                     },
                 ),
@@ -120,21 +120,21 @@ class MiniMaxH3DirectorFaceRefine:
                         "default": 8,
                         "min": 1,
                         "max": 50,
-                        "tooltip": "脸修采样步数。配合 turbo LoRA 常用 8。接了 sigmas 则忽略。",
+                        "tooltip": "Face refine sampling steps. 8 is typical with a turbo LoRA. Ignored when sigmas is connected.",
                     },
                 ),
                 "sampler": (
                     comfy.samplers.KSampler.SAMPLERS,
                     {
                         "default": DEFAULT_SAMPLER,
-                        "tooltip": "脸修采样器。示例工作流常用 euler。",
+                        "tooltip": "Face refine sampler. The example workflows use euler.",
                     },
                 ),
                 "scheduler": (
                     comfy.samplers.KSampler.SCHEDULERS,
                     {
                         "default": DEFAULT_SCHEDULER,
-                        "tooltip": "脸修调度器。接了 sigmas 则忽略。",
+                        "tooltip": "Face refine scheduler. Ignored when the sigmas input is connected.",
                     },
                 ),
             },
@@ -143,15 +143,15 @@ class MiniMaxH3DirectorFaceRefine:
                     list(SEED_MODES),
                     {
                         "default": "inherit",
-                        "tooltip": "inherit = 用导演台 seed；offset = seed+1+段号。",
+                        "tooltip": "inherit = use the Director seed; offset = seed + 1 + segment number.",
                     },
                 ),
-                "bd_grp_face_paste": ("BDGROUP", {"default": "贴回设置"}),
+                "bd_grp_face_paste": ("BDGROUP", {"default": "Paste-back settings"}),
                 "paste_region": (
                     list(PASTE_REGIONS),
                     {
                         "default": "face_only",
-                        "tooltip": "只贴检测脸框（推荐）。full_crop 会贴整块裁剪，容易露方块。",
+                        "tooltip": "Paste only the detected face box (recommended). full_crop pastes the whole crop and tends to leave a visible square.",
                     },
                 ),
                 "mask_dilation": (
@@ -165,7 +165,7 @@ class MiniMaxH3DirectorFaceRefine:
                         "min": 0,
                         "max": 256,
                         "step": 2,
-                        "tooltip": "贴回羽化半径，单位为成片像素。矩形遮罩建议约 24。",
+                        "tooltip": "Paste-back feather radius, in finished-clip pixels. About 24 suits a rectangular mask.",
                     },
                 ),
                 "colour_match": (
@@ -180,7 +180,7 @@ class MiniMaxH3DirectorFaceRefine:
                     "SIGMAS",
                     {
                         "forceInput": True,
-                        "tooltip": "可选。接线后覆盖步数 / 调度器 / denoise。",
+                        "tooltip": "Optional. When connected it overrides steps / scheduler / denoise.",
                     },
                 ),
             },
@@ -194,7 +194,7 @@ class MiniMaxH3DirectorFaceRefine:
         "Connect to Director.face_refine. Director then face-refines the final decoded "
         "segment (after Director Refine if that is also connected). "
         "images is the stitched result; images_pre_face_refine is the video before stitch "
-        "when Director「输出修脸前」is on. "
+        "when Director 'Export pre-face-refine' is on. "
         "Unconnected Director is unchanged. Requires ultralytics + a face YOLO weight."
     )
 

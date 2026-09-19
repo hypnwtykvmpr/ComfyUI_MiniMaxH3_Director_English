@@ -23,7 +23,7 @@ import torch.nn.functional as F
 log = logging.getLogger("ComfyUI-MiniMaxH3-Director.director.h3_latent_upscale")
 
 LATENT_UPSCALE_FOLDER = "latent_upscale_models"
-MISSING_MODEL_LABEL = "(将 3D 权重放入 models/latent_upscale_models)"
+MISSING_MODEL_LABEL = "(place 3D weights in models/latent_upscale_models)"
 
 # Per-channel mean/std from LBH-123-AI H3 latent-upscaler training.
 LATENTS_MEAN = [
@@ -490,8 +490,8 @@ def upscale_h3_video_latent(
     """Spatially upscale MiniMax H3 video latent to a pixel canvas (×16 VAE)."""
     if model is None and (not model_name or str(model_name).startswith("(")):
         raise ValueError(
-            "未选择 H3 latent 放大模型。请在 Refine 的 latent_upscale_model 下拉框里选 3D 权重，"
-            f"并把 safetensors 放到 ComfyUI/models/{LATENT_UPSCALE_FOLDER}/"
+            "No H3 latent upscale model selected. Pick 3D weights in the Refine latent_upscale_model dropdown,"
+            f"and place the safetensors in ComfyUI/models/{LATENT_UPSCALE_FOLDER}/"
         )
     samples = video_latent.get("samples") if isinstance(video_latent, dict) else video_latent
     if not torch.is_tensor(samples):

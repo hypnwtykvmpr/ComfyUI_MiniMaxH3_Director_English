@@ -106,7 +106,7 @@ def segment_passthrough_chunk(plan: DirectorPlan, seg) -> torch.Tensor | None:
     """Best-effort fill for skipped segments from **real source video** only.
 
     Gen timelines (t2v/r2v have no source; i2v/fl2v use held refs as
-    ``source_clip``) — never splice those into「全部导出」or the merge goes gray.
+    ``source_clip``) — never splice those into Export All or the merge goes gray.
     Unselected gen segments must come from disk cache instead.
     """
     if is_gen_timeline_plan(plan):
@@ -124,4 +124,4 @@ def segment_passthrough_chunk(plan: DirectorPlan, seg) -> torch.Tensor | None:
 
 
 def frames_label(seg) -> str:
-    return f"帧 {seg.start_frame}–{seg.end_frame} ({seg.frame_count}f)"
+    return f"Frames {seg.start_frame}–{seg.end_frame} ({seg.frame_count}f)"

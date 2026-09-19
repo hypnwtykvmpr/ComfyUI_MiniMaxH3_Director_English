@@ -38,14 +38,14 @@ class MiniMaxH3DirectorSelfLift:
         default_model = models[0] if models else ""
         return {
             "required": {
-                "bd_grp_selflift_sample": ("BDGROUP", {"default": "渐进采样"}),
+                "bd_grp_selflift_sample": ("BDGROUP", {"default": "Progressive sampling"}),
                 "split_mode": (
                     list(SPLIT_MODES),
                     {
                         "default": "highres_steps",
                         "tooltip": (
-                            "highres_steps = 高清收尾步数（8 步默认 2，即低清 6 + 高清 2）。"
-                            "transition_step = SelfLift 论文的 k（8 步默认 6）。"
+                            "highres_steps = number of high-res finishing steps (default 2 of 8, i.e. 6 low-res + 2 high-res)."
+                            "transition_step = k from the SelfLift paper (default 6 of 8)."
                         ),
                     },
                 ),
@@ -55,7 +55,7 @@ class MiniMaxH3DirectorSelfLift:
                         "default": DEFAULT_HIGHRES_STEPS,
                         "min": 1,
                         "max": 64,
-                        "tooltip": "仅 split_mode=highres_steps。高清阶段步数，建议约为总步数的 25%。",
+                        "tooltip": "split_mode=highres_steps only. Steps in the high-res stage; about 25% of the total is recommended.",
                     },
                 ),
                 "transition_step": (
@@ -64,7 +64,7 @@ class MiniMaxH3DirectorSelfLift:
                         "default": DEFAULT_TRANSITION_STEP,
                         "min": 1,
                         "max": 200,
-                        "tooltip": "仅 split_mode=transition_step。低清前缀步数 k。8 步 turbo 用 6。",
+                        "tooltip": "split_mode=transition_step only. Low-res prefix step count k. Use 6 for 8-step turbo.",
                     },
                 ),
                 "lowres_scale": (
@@ -75,8 +75,8 @@ class MiniMaxH3DirectorSelfLift:
                         "max": 1.0,
                         "step": 0.05,
                         "tooltip": (
-                            "低清画布 = 导演台画布 × 该倍率，再对齐 ×32。"
-                            "1.0 = 不渐进，走原来的一采。"
+                            "Low-res canvas = Director canvas x this scale, then snapped to a multiple of 32."
+                            "1.0 = no progressive pass; use the original single-stage first pass."
                         ),
                     },
                 ),
@@ -85,8 +85,8 @@ class MiniMaxH3DirectorSelfLift:
                     {
                         "default": "euler",
                         "tooltip": (
-                            "默认 euler：SelfLift 两阶段都用 Euler（论文路径，s_churn=0）。"
-                            "不改导演台采样器。follow_director = 跟导演台，但必须也是 euler，否则直接报错。"
+                            "Default euler: SelfLift uses Euler for both stages (the paper's path, s_churn=0)."
+                            "It does not change the Director sampler. follow_director = follow the Director, which must also be euler or this raises an error."
                         ),
                     },
                 ),
@@ -95,21 +95,21 @@ class MiniMaxH3DirectorSelfLift:
                     {
                         "default": True,
                         "tooltip": (
-                            "段间把上一段 native 低清尾写入当前低清前缀（与高清 pin 一起）。"
-                            "关掉则低清前缀只是高清尾再降格，接缝容易闪/糊。"
-                            "导演台未开段间引导时无效。"
+                            "Between segments, write the previous segment's native low-res tail into the current low-res prefix (together with the high-res pin)."
+                            "Turned off, the low-res prefix is just the high-res tail downgraded again, and seams tend to flicker or blur."
+                            "Inert when Director segment continuity is off."
                         ),
                     },
                 ),
-                "bd_grp_selflift_lift": ("BDGROUP", {"default": "提升 / 3D"}),
+                "bd_grp_selflift_lift": ("BDGROUP", {"default": "Lift / 3D"}),
                 "latent_upscale_model": (
                     models,
                     {
                         "default": default_model,
                         "tooltip": (
-                            "H3 3D latent 放大权重，与 Refine 同一目录："
-                            "ComfyUI/models/latent_upscale_models/。"
-                            "rho=0（默认）时必选。"
+                            "H3 3D latent upscale weights, in the same directory as Refine: "
+                            "ComfyUI/models/latent_upscale_models/. "
+                            "Required when rho=0 (the default)."
                         ),
                     },
                 ),
@@ -117,7 +117,7 @@ class MiniMaxH3DirectorSelfLift:
                     list(UPSAMPLE_MODES),
                     {
                         "default": "bilinear",
-                        "tooltip": "降格 cond / 升采样过渡态 x 的插值。干净端点 x0 走 3D 网。",
+                        "tooltip": "Interpolation for downgrading cond / upsampling the transition state x. The clean endpoint x0 goes through the 3D network.",
                     },
                 ),
                 "rho": (
@@ -128,9 +128,9 @@ class MiniMaxH3DirectorSelfLift:
                         "max": 1.0,
                         "step": 0.05,
                         "tooltip": (
-                            "论文像素锚混合。0 = 只用 3D lift（推荐，避免 VAE 往返）。"
-                            ">0 时解码低清 x0、lanczos 放大像素再编码，按 w_min/w_max 混进 3D 结果。"
-                            "真正的 3D 权重在上面的 latent_upscale_model。"
+                            "Pixel-anchor blend from the paper. 0 = use the 3D lift only (recommended; avoids a VAE round trip)."
+                            "Above 0 it decodes the low-res x0, upscales the pixels with lanczos, re-encodes, and blends that into the 3D result using w_min/w_max."
+                            "The actual 3D weights are the latent_upscale_model above."
                         ),
                     },
                 ),
@@ -141,7 +141,7 @@ class MiniMaxH3DirectorSelfLift:
                         "min": 0.0,
                         "max": 1.0,
                         "step": 0.05,
-                        "tooltip": "仅 rho>0。低频区域的像素锚权重。",
+                        "tooltip": "rho>0 only. Pixel-anchor weight in low-frequency regions.",
                     },
                 ),
                 "w_max": (
@@ -151,24 +151,24 @@ class MiniMaxH3DirectorSelfLift:
                         "min": 0.0,
                         "max": 1.0,
                         "step": 0.05,
-                        "tooltip": "仅 rho>0。高频残差区域的像素锚权重。",
+                        "tooltip": "rho>0 only. Pixel-anchor weight in high-frequency residual regions.",
                     },
                 ),
                 "enable_latent_chunking": (
                     "BOOLEAN",
                     {
                         "default": False,
-                        "tooltip": "3D lift 时间分块（省显存，默认关）。接缝可能和整段前向不同。",
+                        "tooltip": "Temporal chunking for the 3D lift (saves VRAM, off by default). Seams may differ from a whole-segment forward pass.",
                     },
                 ),
-                "bd_grp_selflift_tile": ("BDGROUP", {"default": "高清分块"}),
+                "bd_grp_selflift_tile": ("BDGROUP", {"default": "High-res tiling"}),
                 "enable_tiling": (
                     "BOOLEAN",
                     {
                         "default": False,
                         "tooltip": (
-                            "仅高清收尾空间分块（默认关）。低清阶段不分块。"
-                            "音频不切空间。"
+                            "Spatial tiling for the high-res finish only (off by default). The low-res stage is not tiled."
+                            "Audio is not tiled spatially."
                         ),
                     },
                 ),
@@ -178,7 +178,7 @@ class MiniMaxH3DirectorSelfLift:
                         "default": DEFAULT_SPATIAL_TILES,
                         "min": 1,
                         "max": MAX_SPATIAL_TILES,
-                        "tooltip": "高清分块数量。1 等同不分块。",
+                        "tooltip": "Number of high-res tiles. 1 is the same as no tiling.",
                     },
                 ),
                 "tile_overlap": (
@@ -188,7 +188,7 @@ class MiniMaxH3DirectorSelfLift:
                         "min": 0,
                         "max": 2048,
                         "step": 64,
-                        "tooltip": "块间重叠，单位为输出像素。",
+                        "tooltip": "Overlap between tiles, in output pixels.",
                     },
                 ),
             },
@@ -197,8 +197,8 @@ class MiniMaxH3DirectorSelfLift:
                     "MODEL",
                     {
                         "tooltip": (
-                            "可选高清阶段 UNET。不接则低清/高清都用导演台主模型。"
-                            "适合低清挂 Turbo、高清换一套。"
+                            "Optional UNET for the high-res stage. Unconnected, both the low-res and high-res stages use the Director's main model."
+                            "Useful for running Turbo on the low-res stage and a different model on high-res."
                         ),
                     },
                 ),

@@ -1,16 +1,16 @@
 """Extract source audio aligned with MiniMax H3 Director timeline (v2v / rv2v).
 
-Independent of video tensors (does not touch decode / 娈甸棿寮曞). Same frame
+Independent of video tensors (does not touch decode / segment continuity). Same frame
 selection as ``load_video_resampled``, with PCM-safe clocks:
 
-  1. logical 鈫?frameMap 鈫?source index
+  1. logical → frameMap → source index
   2. native = round((src / timeline_fps) * opencv_fps)  # same as video decode
   3. seek PCM at container time of that native, converted to the audio stream:
-       pcm_start = video_pts0 + native0 * frame_dur 鈭?audio_start
-     (full-file decode starts at sample 0 鈮?audio_start, not video_pts0)
+       pcm_start = video_pts0 + native0 * frame_dur − audio_start
+     (full-file decode starts at sample 0 ≥ audio_start, not video_pts0)
   4. take exactly ``count / timeline_fps`` of audio (IMAGE / Combine clock).
-     Pad/trim only 鈥?never stretch PTS media into a shorter timeline window
-     (that reads as 鈥滃姞閫熸斁瀹屸€?.
+     Pad/trim only — never stretch PTS media into a shorter timeline window
+     (that reads as “sped up and finishes early”.
   5. Join spans on consecutive *source* frames (not native decode indices) so
      timeline fps remapping does not shatter PCM into per-frame clicks; apply a
      short edge fade only at real multi-clip / gap boundaries.
@@ -185,9 +185,9 @@ def _src_frame_to_native(src_frame: int, *, timeline_fps: float, file_fps: float
 
 
 def _probe_av_timing(path: str, *, fallback_fps: float) -> tuple[float, float, float]:
-    """Return (video_pts0, audio_start, frame_dur) for PCM 鈫?picture sync.
+    """Return (video_pts0, audio_start, frame_dur) for PCM → picture sync.
 
-    Full-file PCM from ffmpeg starts at sample 0 鈮?audio stream start_time.
+    Full-file PCM from ffmpeg starts at sample 0 ≥ audio stream start_time.
     Video frame ``n`` presents at video_pts0 + n * frame_dur. Convert with
     ``pcm_t = video_t - audio_start`` before indexing samples.
     """
@@ -440,7 +440,7 @@ def _resolve_pcm_start_sample(
         if alt < have:
             log.debug(
                 "Source audio: PTS seek past PCM (i0=%d have=%d); "
-                "fallback native/file_fps 鈫?sample %d",
+                "fallback native/file_fps → sample %d",
                 i0,
                 have,
                 alt,
@@ -619,18 +619,18 @@ def extract_timeline_audio(
         if i0 != i0_pts and i0_pts >= int(wave.shape[-1]):
             fallback_seeks += 1
         # Take timeline-length audio only (pad if short). Never stretch longer
-        # PTS media into a shorter window 鈥?that causes 鈥滃姞閫熸斁瀹屸€?
+        # PTS media into a shorter window — that causes “sped up and finishes early”
         chunks.append(_slice_samples(wave, src_start=i0, n_samples=n_out))
 
     if fallback_seeks > 0:
         log.info(
             "Source audio: %d span(s) used native/file_fps seek "
-            "(PTS start was past decoded PCM 鈥?typical after trimming the head).",
+            "(PTS start was past decoded PCM — typical after trimming the head).",
             fallback_seeks,
         )
     if len(spans) > 50:
         log.warning(
-            "Source audio: %d fragmented spans (timeline fps likely 鈮?source). "
+            "Source audio: %d fragmented spans (timeline fps likely ≥ source). "
             "Prefer matching Director fps to source for cleaner cuts.",
             len(spans),
         )
@@ -687,7 +687,7 @@ def diagnose_source_audio_failure(
         return "input video has no audio track"
     if ffprobe_bin() is None:
         return (
-            "audio extraction failed 鈥?ffprobe not found "
+            "audio extraction failed — ffprobe not found "
             "(install a full FFmpeg build with ffprobe on PATH) "
             "and/or ffmpeg could not decode audio from the source"
         )

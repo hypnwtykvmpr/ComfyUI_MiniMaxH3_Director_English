@@ -5,7 +5,7 @@
  * the cache-status request (which only carries Director widget values) cannot
  * rebuild the executed segments. Without a witness it rebuilt the expected
  * fingerprint from the UI timeline — where external-group prompts, durations
- * and reference media never live — and therefore always reported 不匹配.
+ * and reference media never live — and therefore always reported a mismatch.
  *
  * The witness digests
  *   1. every node upstream of the connected group input (id, class, bypass
@@ -19,7 +19,7 @@
  *
  * `facets` buckets the graph by category — wiring / prompt / length / media /
  * other, plus the timeline projection — so the panel can name the changed item
- * ("外接组提示词") instead of listing every key that could have changed. An
+ * ("External group prompt") instead of listing every key that could have changed. An
  * upstream node's widgets are bucketed through the input they feed as well, so a
  * multiline text node whose widget is named `value` still counts as a prompt.
  * `groups[i]` does the same per segment: `dur` is the group's own duration in
@@ -255,7 +255,7 @@ function wireFacet(name) {
  * widgets of an *upstream* node by the input it feeds: the text node wired into
  * `prompt` is very often named `value` (PrimitiveStringMultiline) or `string`,
  * so its own widget name alone would drop a prompt edit into the catch-all
- * "other" bucket instead of naming it「外接组提示词」.
+ * "other" bucket instead of naming it "External group prompt".
  */
 function facetForName(name) {
     if (!name) return "";
@@ -445,7 +445,7 @@ export function buildExternalGroupsWitness(node) {
 
 /**
  * Run selection carried by the timeline payload. Under external groups
- * 「选择运行」 selects *groups*, so the panel mirrors it to keep the same
+ * "Select to run" selects *groups*, so the panel mirrors it to keep the same
  * selected/total split the run will use.
  */
 function timelineSelection(timeline) {

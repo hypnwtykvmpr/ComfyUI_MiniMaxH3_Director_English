@@ -46,11 +46,11 @@ DEFAULT_ZHIPU_URL = "https://open.bigmodel.cn/api/paas/v4"
 DEFAULT_ZHIPU_MODEL = "glm-4.6v-flash"
 DEFAULT_OPENAI_COMPAT_URL = "http://127.0.0.1:8080/v1"
 API_FORMAT_OLLAMA = "Ollama"
-API_FORMAT_ZHIPU = "智谱 GLM"
+API_FORMAT_ZHIPU = "Zhipu GLM"
 API_FORMAT_OPENAI_COMPAT = "OpenAI Compatible"
 _LEGACY_OPENAI_FORMAT = "OpenAI / vLLM"
 DEFAULT_API_FORMAT = API_FORMAT_OLLAMA
-OPENAI_COMPAT_MODE_STANDARD = "标准"
+OPENAI_COMPAT_MODE_STANDARD = "Standard"
 OPENAI_COMPAT_MODE_LLAMA_SWAP = "llama-swap"
 DEFAULT_OPENAI_COMPAT_MODE = OPENAI_COMPAT_MODE_STANDARD
 DEFAULT_OLLAMA_NUM_CTX = int(os.environ.get("BERNINI_PE_OLLAMA_NUM_CTX", "32768"))
@@ -209,8 +209,8 @@ def _prepare_zhipu_images(model: str, images: list[str]) -> tuple[list[str], str
         return [], None
     if zhipu_legacy_4v_flash(model):
         return [], (
-            "智谱 glm-4v-flash 不支持 Base64 图片。"
-            "带参考图/视频帧扩写请改用 glm-4.6v-flash 或 glm-4.5v-flash。"
+            "Zhipu glm-4v-flash does not support Base64 images."
+            "For enhancement with reference images / video frames, use glm-4.6v-flash or glm-4.5v-flash instead."
         )
     if zhipu_legacy_4v_flash(model) is False and "4v-plus" in (model or "").lower():
         return images[:5], None
@@ -221,12 +221,12 @@ def _format_zhipu_http_error(status: int, body: str, *, model: str) -> str:
     if status == 400 and "1210" in body and "messages.content.type" in body:
         if not zhipu_supports_vision(model):
             return (
-                f"HTTP {status}: 智谱模型 {model} 为纯文本模型，不支持附带图片。"
-                "带参考图/视频帧扩写请改用 glm-4.6v-flash；纯文本扩写可用 glm-4-flash-250414。"
+                f"HTTP {status}: Zhipu model {model} is a text-only model and does not support attached images."
+                "For enhancement with reference images / video frames, use glm-4.6v-flash; for text-only enhancement use glm-4-flash-250414."
             )
         return (
-            f"HTTP {status}: 智谱消息格式错误（{body[:200]}）。"
-            "请确认使用支持视觉的模型（如 glm-4.6v-flash）。"
+            f"HTTP {status}: Zhipu message format error ({body[:200]})."
+            "Make sure to use a vision-capable model (e.g. glm-4.6v-flash)."
         )
     return f"HTTP {status}: {body[:500]}"
 
@@ -593,7 +593,7 @@ def enhance_prompt_sync(
     endpoint = llm_chat_endpoint(base_url, api_format)
 
     if api_format == API_FORMAT_ZHIPU and not resolve_api_key(api_format, api_key):
-        return None, "智谱 API Key 未配置（请在面板填写或设置环境变量）"
+        return None, "Zhipu API Key is not configured (fill it in the panel or set an environment variable)"
 
     src_count = vision_source_count if vision_source_count is not None else 0
     slots = list(ref_slots or [])
@@ -833,9 +833,9 @@ def enhance_prompt_sync(
             if last[1] and _is_ollama_context_error(last[1]):
                 return None, (
                     f"{last[1]} "
-                    f"（已自动放大 num_ctx 并压缩 Vision 图片仍不足；"
-                    f"可设环境变量 BERNINI_PE_OLLAMA_NUM_CTX=65536，"
-                    f"或减少参考图/源视频帧，或换更小 Vision 模型）"
+                    f"(auto-increased num_ctx and compressed Vision images are still insufficient; "
+                    f"set BERNINI_PE_OLLAMA_NUM_CTX=65536, "
+                    f"or reduce reference images / source video frames, or use a smaller Vision model)"
                 )
             return last
         num_ctx = DEFAULT_OLLAMA_NUM_CTX if api_format == API_FORMAT_OLLAMA else 0
@@ -904,11 +904,11 @@ def enhance_prompt_sync(
                 continue
             if not (raw or "").strip():
                 hint = (
-                    "LLM 返回内容为空。"
-                    "若使用 qwen3 等思考模型，请升级 Ollama 或换用 glm-4-flash / qwen2.5 等非思考模型。"
+                    "LLM returned empty content."
+                    "If using a thinking model such as qwen3, upgrade Ollama or switch to a non-thinking model like glm-4-flash / qwen2.5."
                 )
                 return None, hint
-            return None, f"LLM 返回无法解析（前 120 字）：{(raw or '')[:120]}"
+            return None, f"LLM returned unparseable content (first 120 chars): {(raw or '')[:120]}"
 
         parsed = ensure_user_reference_tags(parsed, user_slots or directive_slots)
         han = count_han_chars(parsed)

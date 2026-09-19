@@ -42,7 +42,7 @@ R2V_FAMILY = frozenset({"r2v"})
 # changes it cannot recompute from widget values alone.
 EXTERNAL_WITNESS_KEY = "externalGroupsWitness"
 _WITNESS_STR_MAX = 120
-# Named buckets of the witness, used to say *what* changed instead of "外接组".
+# Named buckets of the witness, used to say *what* changed instead of "external groups".
 WITNESS_FACETS = ("wiring", "prompt", "length", "media", "other", "timeline")
 # Group records are capped frontend-side too; this only guards against a hand
 # crafted payload.
@@ -217,7 +217,7 @@ def normalize_external_witness(raw: Any) -> dict[str, Any] | None:
         ]
         if groups:
             out["groups"] = groups
-    # 「选择运行」selection, mirrored by the panel to report the same selected split.
+    # "Select to run" selection, mirrored by the panel to report the same selected split.
     raw_sel = raw.get("sel")
     if isinstance(raw_sel, dict) and raw_sel.get("on") and isinstance(raw_sel.get("idx"), list):
         picked: list[int] = []
@@ -626,8 +626,8 @@ def build_plan_from_external_groups(
     if not indices:
         raise ValueError("External groups: no groups selected to run.")
 
-    # Keep the full group list so「段间引导」can pin the true previous neighbor
-    # (via cache) even when「选择运行」only samples a subset — same model as
+    # Keep the full group list so Segment continuity can pin the true previous neighbor
+    # (via cache) even when Select to run only samples a subset — same model as
     # native prompt_batch / source timelines (run_indices, not compacted plan).
     all_indexed = list(enumerate(groups))
     run_indices = (

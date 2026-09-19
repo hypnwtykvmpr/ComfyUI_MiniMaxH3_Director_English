@@ -15,11 +15,11 @@ from .official_pe_templates import (
 from .task_prompts import get_task_prompt_spec
 
 OUTPUT_LANGUAGE_EN = "English"
-OUTPUT_LANGUAGE_ZH = "中文"
+OUTPUT_LANGUAGE_ZH = "Chinese"
 
 # Legacy combo values (workflows saved before checkbox migration).
-CHARACTER_DETAIL_NORMAL = "一般"
-CHARACTER_DETAIL_DETAILED = "详尽"
+CHARACTER_DETAIL_NORMAL = "Normal"
+CHARACTER_DETAIL_DETAILED = "Detailed"
 
 DETAILED_MIN_TOTAL_HAN = 300
 DETAILED_MIN_APPEARANCE_HAN = 200

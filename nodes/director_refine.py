@@ -40,9 +40,9 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": "refine",
                         "tooltip": (
-                            "refine = 同分辨率二采（精修）。"
-                            "upscale = 先放大到目标画布再二采。"
-                            "latent_upscale = 只放大 H3 latent，不再二采。"
+                            "refine = same-resolution second sample (refine)."
+                            "upscale = enlarge to the target canvas first, then second-sample."
+                            "latent_upscale = enlarge only the H3 latent, no second sample."
                         ),
                     },
                 ),
@@ -51,12 +51,12 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": "h3_latent",
                         "tooltip": (
-                            "仅 mode=upscale。"
-                            "h3_latent = 先按目标画布放大 H3 视频 latent，再二采"
-                            "（下方选 3D 权重）。"
-                            "lanczos = 像素插值；可另接 upscale_model（RealESRGAN 等）。"
+                            "Only applies when mode=upscale."
+                            "h3_latent = enlarge the H3 video latent to the target canvas first, then second-sample"
+                            "(select the 3D weights below)."
+                            "lanczos = pixel interpolation; can also connect an upscale_model (RealESRGAN, etc.)."
                             "nvidia_rtx_vsr = NVIDIA RTX Video Super Resolution"
-                            "（需 nvidia-vfx + NVIDIA GPU）。"
+                            "(requires nvidia-vfx + an NVIDIA GPU)."
                         ),
                     },
                 ),
@@ -64,10 +64,10 @@ class MiniMaxH3DirectorRefine:
                     list_h3_latent_upscale_models(),
                     {
                         "tooltip": (
-                            "H3 3D latent 放大权重。"
-                            "放到 ComfyUI/models/latent_upscale_models/，"
-                            "文件名含 3d（如 minimax_h3_latent_upscaler_3d_*.safetensors）。"
-                            "mode=latent_upscale，或 upscale + h3_latent 时使用。"
+                            "H3 3D latent upscale weights."
+                            "Place them in ComfyUI/models/latent_upscale_models/ with"
+                            "a filename containing 3d (e.g. minimax_h3_latent_upscaler_3d_*.safetensors)."
+                            "Used when mode=latent_upscale, or upscale + h3_latent."
                         ),
                     },
                 ),
@@ -76,8 +76,8 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": DEFAULT_REFINE_SIGMA_SAMPLER,
                         "tooltip": (
-                            "二采采样器。海螺案例用 euler；"
-                            "BasicScheduler 高质量二采常用 res_multistep。"
+                            "Second-pass sampler. Hailuo examples use euler;"
+                            "BasicScheduler high-quality second passes commonly use res_multistep."
                         ),
                     },
                 ),
@@ -88,9 +88,9 @@ class MiniMaxH3DirectorRefine:
                         "min": 1,
                         "max": MAX_REFINE_PASSES,
                         "tooltip": (
-                            "精修次数。1 = 一次二采。"
-                            "upscale 时只有第 1 次放大，之后都是同分辨率精修。"
-                            "latent_upscale 不二采，此值无效。"
+                            "Number of refine passes. 1 = a single second sample."
+                            "With upscale, only the first pass enlarges; later passes refine at the same resolution."
+                            "latent_upscale does not second-sample, so this value is ignored."
                         ),
                     },
                 ),
@@ -100,9 +100,9 @@ class MiniMaxH3DirectorRefine:
                     "MODEL",
                     {
                         "tooltip": (
-                            "Second-pass UNET (二采模型)。"
-                            "不接则用导演台主模型。"
-                            "适合一采挂 Turbo LoRA、二采卸掉或换另一套。"
+                            "Second-pass UNET (refine model)."
+                            "If not connected, uses the Director's main model."
+                            "Useful for applying a Turbo LoRA on the first pass and removing or swapping it on the second pass."
                         ),
                     },
                 ),
@@ -111,10 +111,10 @@ class MiniMaxH3DirectorRefine:
                     {
                         "forceInput": True,
                         "tooltip": (
-                            "二采噪声表。接 Comfy 自带 BasicScheduler 或 ManualSigmas。"
-                            "mode=refine / upscale 时必须接线。"
-                            "BasicScheduler 请接和二采相同的 MODEL（导演台主模型或 refine_model）。"
-                            "H3 的 SigmaShift 仍由 Refine 内部套上。"
+                            "Second-pass noise schedule. Connect ComfyUI's BasicScheduler or ManualSigmas."
+                            "Required when mode=refine / upscale."
+                            "For BasicScheduler, connect the same MODEL used for the second pass (Director main model or refine_model)."
+                            "H3's SigmaShift is still applied internally by Refine."
                         ),
                     },
                 ),
@@ -122,9 +122,9 @@ class MiniMaxH3DirectorRefine:
                     "UPSCALE_MODEL",
                     {
                         "tooltip": (
-                            "可选。用「加载放大模型」接入，例如 RealESRGAN_x2plus。"
-                            "仅 mode=upscale 且 upscale_method=lanczos 时使用。"
-                            "不接则纯 lanczos 插值。选 nvidia_rtx_vsr / h3_latent 时忽略此口。"
+                            "Optional. Connect a Load Upscale Model node, e.g. RealESRGAN_x2plus."
+                            "Only used when mode=upscale and upscale_method=lanczos."
+                            "If not connected, plain lanczos interpolation is used. Ignored with nvidia_rtx_vsr / h3_latent."
                         ),
                     },
                 ),
@@ -132,7 +132,7 @@ class MiniMaxH3DirectorRefine:
                     list(SEED_MODES),
                     {
                         "default": "inherit",
-                        "tooltip": "inherit = 用导演台 seed；offset = 每轮 seed+1、+2…。",
+                        "tooltip": "inherit = use the Director seed; offset = seed+1, +2… each pass.",
                     },
                 ),
                 "aspect_ratio": (
@@ -140,11 +140,11 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": FOLLOW_DIRECTOR_ASPECT,
                         "tooltip": (
-                            "放大目标画布，算法同导演台「输出分辨率」。"
-                            "导演台是一采分辨率（例如 0.4 MP），这里是放大后的目标"
-                            "（例如 1.0 MP）。跟随导演台：按导演台画布比例推 720P 档。"
-                            "比例预设：配合百万像素。"
-                            "自定义：直接填宽高（对齐 ×32）。"
+                            "Upscale target canvas, same algorithm as the Director's Output Resolution."
+                            "The Director is the first-pass resolution (e.g. 0.4 MP); this is the enlarged target"
+                            "(e.g. 1.0 MP). Follow Director: derive the 720P tier from the Director canvas ratio."
+                            "Ratio presets: pair with megapixels."
+                            "Custom: enter width/height directly (aligned to ×32)."
                         ),
                     },
                 ),
@@ -156,8 +156,8 @@ class MiniMaxH3DirectorRefine:
                         "max": 16.0,
                         "step": 0.1,
                         "tooltip": (
-                            "百万像素，同导演台 ResolutionSelector。"
-                            "1.0 MP 在 16:9 约为 1376×768（对齐 32）。仅比例预设时生效。"
+                            "Megapixels, same as the Director's ResolutionSelector."
+                            "1.0 MP at 16:9 is roughly 1376×768 (aligned to 32). Only used with ratio presets."
                         ),
                     },
                 ),
@@ -168,7 +168,7 @@ class MiniMaxH3DirectorRefine:
                         "min": 0,
                         "max": 8192,
                         "step": 32,
-                        "tooltip": "自定义宽度（×32）。仅「自定义」时生效。",
+                        "tooltip": "Custom width (×32). Only used with Custom.",
                     },
                 ),
                 "height": (
@@ -178,7 +178,7 @@ class MiniMaxH3DirectorRefine:
                         "min": 0,
                         "max": 8192,
                         "step": 32,
-                        "tooltip": "自定义高度（×32）。仅「自定义」时生效。",
+                        "tooltip": "Custom height (×32). Only used with Custom.",
                     },
                 ),
                 "skip_fl2v": (
@@ -186,9 +186,9 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": True,
                         "tooltip": (
-                            "跳过首尾帧（fl2v）镜头的二采/放大。"
-                            "二采会改画面，容易把钉死的首尾帧画飘；默认跳过以保护关键帧。"
-                            "关掉则 fl2v 也走精修 / latent 放大。"
+                            "Skip the second sample / upscale for first-last frame (fl2v) shots."
+                            "The second sample alters the image and can drift locked first/last frames; skipped by default to protect keyframes."
+                            "When off, fl2v also goes through refine / latent upscale."
                         ),
                     },
                 ),
@@ -197,10 +197,10 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": False,
                         "tooltip": (
-                            "先确认一采再二采。默认关：一采完立刻二采（与现在相同）。"
-                            "开：没有一采缓存时只跑一采并写出缓存/_pre.mp4；"
-                            "已有精确匹配的一采缓存（同一 seed 及一采参数）则跳过一采只跑二采。"
-                            "seed 请用 fixed，或第二次 Queue 前改回写出缓存时的 seed。"
+                            "Confirm the first pass before the second pass. Default off: the second sample runs right after the first pass (same as before)."
+                            "On: with no first-pass cache, only the first pass runs and writes cache/_pre.mp4;"
+                            "with an exactly matching first-pass cache (same seed and first-pass params), the first pass is skipped and only the second pass runs."
+                            "For seed, use fixed, or set the seed back to the one used when the cache was written before the second Queue."
                         ),
                     },
                 ),
@@ -209,10 +209,10 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": False,
                         "tooltip": (
-                            "H3 latent 放大的时间分块（省显存，默认关）。"
-                            "开：latent 超过 24 帧时按 24 帧切块、重叠区加权融合，"
-                            "放大网峰值更低，长段不易在这一步 OOM；接缝可能和整段前向不同。"
-                            "≤24 帧仍走整段。关则与现在完全一致。"
+                            "Temporal chunking for H3 latent upscale (saves VRAM, off by default)."
+                            "On: latent over 24 frames is split into 24-frame chunks with weighted overlap blending,"
+                            "lowering upscale-net peak VRAM so long segments are less likely to OOM here; seams may differ from a whole-segment forward."
+                            "≤24 frames still runs whole. Off is identical to the current behavior."
                         ),
                     },
                 ),
@@ -221,11 +221,11 @@ class MiniMaxH3DirectorRefine:
                     {
                         "default": False,
                         "tooltip": (
-                            "二采空间分块（省显存，默认关）。"
-                            "开：沿画面长边切开视频 latent，每步分块前向再叠回；"
-                            "音频整段参与，不切空间。"
-                            "关：整幅一次采样，与现在完全一致。"
-                            "mode=latent_upscale（不二采）时无效。"
+                            "Spatial tiling for the second sample (saves VRAM, off by default)."
+                            "On: the video latent is split along the long image edge, each step runs tiled forwards and composites back;"
+                            "audio participates as a whole, not spatially split."
+                            "Off: whole image sampled in one go, identical to the current behavior."
+                            "Ignored when mode=latent_upscale (no second sample)."
                         ),
                     },
                 ),
@@ -237,8 +237,8 @@ class MiniMaxH3DirectorRefine:
                         "max": 8,
                         "step": 1,
                         "tooltip": (
-                            "分块数量。越大单块显存越低，但前向次数更多、更慢。"
-                            "1 等同不分块。"
+                            "Number of tiles. More tiles lower per-tile VRAM but increase forward passes and are slower."
+                            "1 is equivalent to no tiling."
                         ),
                     },
                 ),
@@ -250,8 +250,8 @@ class MiniMaxH3DirectorRefine:
                         "max": 2048,
                         "step": 64,
                         "tooltip": (
-                            "块间重叠，单位为输出像素（步长 64）。"
-                            "越大接缝越轻，单块也越大，省显存越少。"
+                            "Overlap between tiles, in output pixels (step 64)."
+                            "Larger reduces seams but makes each tile bigger and saves less VRAM."
                         ),
                     },
                 ),

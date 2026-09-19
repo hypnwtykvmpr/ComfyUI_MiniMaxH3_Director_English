@@ -35,7 +35,7 @@ PREFIX_STEPS_KEY = "_director_continue_prefix_steps"
 CONTINUE_SEAM_KEY = "_director_continue_seam_min"
 SEAM_TAPER_TOKENS = 4
 # 0 = hard-copy the seam tokens (sampler keeps latent_image). H3 also treats
-# mask=0 as VISUAL_COND_TIMESTEP; that is what「重绘幅度 0」asks for.
+# mask=0 as VISUAL_COND_TIMESTEP; that is what "redraw amount 0" asks for.
 SEAM_MIN_MASK = 0.10
 SEAM_FLOOR_MIN = 0.0
 SEAM_FLOOR_MAX = 0.95
@@ -44,7 +44,7 @@ _WRAPPER_KEY = "director_h3_continue_prefix_remask"
 
 
 def clamp_seam_min_mask(value) -> float:
-    """User-facing 重绘幅度. Higher = more redraw / less copy of the previous tail."""
+    """User-facing redraw amount. Higher = more redraw / less copy of the previous tail."""
     try:
         n = float(value)
     except (TypeError, ValueError):

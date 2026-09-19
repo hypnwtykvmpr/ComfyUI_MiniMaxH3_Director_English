@@ -8,12 +8,13 @@ import {
     snapResolutionDim,
 } from "./minimax_gen_timeline.js";
 import { injectExternalGroupsWitness } from "./minimax_external_witness.js";
+import { t } from "./minimax_i18n.js";
 import { collectSelfLiftWitness } from "./minimax_selflift.js";
 
 const REFINE_CLASS = "MiniMaxH3DirectorRefine";
 const DIRECTOR_CLASSES = new Set(["MiniMaxH3Director", "ComfyMiniMaxH3Director"]);
 const CACHE_STATUS_WIDGET = "first_pass_cache_status";
-const FOLLOW_DIRECTOR_ASPECT = "跟随导演台";
+const FOLLOW_DIRECTOR_ASPECT = "Follow Director";
 
 function isRefineNode(node) {
     const cls = node?.comfyClass || node?.type || "";
@@ -67,14 +68,14 @@ const ASPECT_CHOICES = new Set([
     "Follow Director",
     CUSTOM_ASPECT_RATIO,
     "Custom",
-    "1:1 (方形)",
-    "2:3 (竖版照片)",
-    "3:2 (横版照片)",
-    "3:4 (竖版标准)",
-    "4:3 (标准)",
-    "9:16 (竖屏)",
-    "16:9 (宽屏)",
-    "21:9 (超宽)",
+    "1:1 (Square)",
+    "2:3 (Portrait photo)",
+    "3:2 (Landscape photo)",
+    "3:4 (Portrait standard)",
+    "4:3 (Standard)",
+    "9:16 (Portrait)",
+    "16:9 (Widescreen)",
+    "21:9 (Ultrawide)",
 ]);
 
 const UPSCALE_METHOD_VALUES = new Set(["lanczos", "nvidia_rtx_vsr", "h3_latent"]);
@@ -251,66 +252,73 @@ function directorValue(node, name, fallback) {
 }
 
 /** Fingerprint key → what the user actually changed. */
-const CACHE_DIFF_LABELS = {
-    seed: "seed",
-    start: "片段起点",
-    end: "片段终点（时间范围变化）",
-    prompt: "提示词",
-    negative: "反向提示词",
-    task_key: "生成模式",
-    width: "宽度",
-    height: "高度",
-    frame_rate: "帧率",
-    output_mode: "输出模式",
-    refs: "参考图片",
-    ref_audios: "参考音频",
-    ref_videos: "参考视频",
-    ref_video: "参考视频",
-    ref_video_start: "参考视频起点",
-    source_video: "源视频",
-    continuity: "段间连续性",
-    continuity_overlap: "上下文帧数",
-    continuity_mode: "引导方式",
-    continuity_redraw: "重绘幅度",
-    continuity_keep_tail: "保完整",
-    cfg: "CFG",
-    steps: "一采步数",
-    sampler: "一采采样器",
-    scheduler: "调度器",
-    sigmas: "一采噪声表",
-    sigmas_source: "一采 SIGMAS 接线",
-    shift_video: "视频 shift",
-    shift_audio: "音频 shift",
-    "<invalid-meta>": "缓存信息损坏",
-    external_wiring: "外接组接线",
-    external_prompt: "外接组提示词",
-    external_length: "外接组时长",
-    external_shift: "外接组时间轴推移",
-    external_media: "外接组参考素材",
-    external_other: "外接组其他参数",
-    external_groups_off: "外接组（缓存写入后接线已断开）",
-    "<unverified-external>": "未记录外接组（旧版写入）",
-    selflift: "SelfLift",
-    sl_split: "SelfLift 分段方式",
-    sl_high: "SelfLift 高清步数",
-    sl_trans: "SelfLift 过渡步",
-    sl_scale: "SelfLift 低清倍率",
-    sl_model: "SelfLift 3D 权重",
-    sl_samp: "SelfLift 采样器",
-    sl_carry: "SelfLift 低清承接",
-    sl_rho: "SelfLift rho",
-    sl_wmin: "SelfLift w_min",
-    sl_wmax: "SelfLift w_max",
-    sl_up: "SelfLift 插值",
-    sl_chunk: "SelfLift 时间分块",
-    sl_tile: "SelfLift 空间分块",
-    sl_tiles: "SelfLift 分块数",
-    sl_overlap: "SelfLift 分块重叠",
-    sl_hires_model: "SelfLift 高清模型",
+/** Cache-diff key -> i18n key. Values are resolved through t() at call time so
+ *  the panel follows the language toggle like the rest of the UI. */
+const CACHE_DIFF_LABEL_KEYS = {
+    seed: "refine.diff.seed",
+    start: "refine.diff.start",
+    end: "refine.diff.end",
+    prompt: "refine.diff.prompt",
+    negative: "refine.diff.negative",
+    task_key: "refine.diff.task_key",
+    width: "refine.diff.width",
+    height: "refine.diff.height",
+    frame_rate: "refine.diff.frame_rate",
+    output_mode: "refine.diff.output_mode",
+    refs: "refine.diff.refs",
+    ref_audios: "refine.diff.ref_audios",
+    ref_videos: "refine.diff.ref_videos",
+    ref_video: "refine.diff.ref_video",
+    ref_video_start: "refine.diff.ref_video_start",
+    ref_max: "refine.diff.ref_max",
+    ref_image_size: "refine.diff.ref_image_size",
+    source_video: "refine.diff.source_video",
+    continuity: "refine.diff.continuity",
+    continuity_overlap: "refine.diff.continuity_overlap",
+    continuity_mode: "refine.diff.continuity_mode",
+    continuity_redraw: "refine.diff.continuity_redraw",
+    continuity_keep_tail: "refine.diff.continuity_keep_tail",
+    continuity_from_prev: "refine.diff.continuity_from_prev",
+    continuity_pipeline: "refine.diff.continuity_pipeline",
+    cfg: "refine.diff.cfg",
+    steps: "refine.diff.steps",
+    sampler: "refine.diff.sampler",
+    scheduler: "refine.diff.scheduler",
+    sigmas: "refine.diff.sigmas",
+    sigmas_source: "refine.diff.sigmas_source",
+    shift_video: "refine.diff.shift_video",
+    shift_audio: "refine.diff.shift_audio",
+    "<invalid-meta>": "refine.diff.invalidMeta",
+    external_wiring: "refine.diff.external_wiring",
+    external_prompt: "refine.diff.external_prompt",
+    external_length: "refine.diff.external_length",
+    external_shift: "refine.diff.external_shift",
+    external_media: "refine.diff.external_media",
+    external_other: "refine.diff.external_other",
+    external_groups_off: "refine.diff.external_groups_off",
+    "<unverified-external>": "refine.diff.unverifiedExternal",
+    selflift: "refine.diff.selflift",
+    sl_split: "refine.diff.sl_split",
+    sl_high: "refine.diff.sl_high",
+    sl_trans: "refine.diff.sl_trans",
+    sl_scale: "refine.diff.sl_scale",
+    sl_model: "refine.diff.sl_model",
+    sl_samp: "refine.diff.sl_samp",
+    sl_carry: "refine.diff.sl_carry",
+    sl_rho: "refine.diff.sl_rho",
+    sl_wmin: "refine.diff.sl_wmin",
+    sl_wmax: "refine.diff.sl_wmax",
+    sl_up: "refine.diff.sl_up",
+    sl_chunk: "refine.diff.sl_chunk",
+    sl_tile: "refine.diff.sl_tile",
+    sl_tiles: "refine.diff.sl_tiles",
+    sl_overlap: "refine.diff.sl_overlap",
+    sl_hires_model: "refine.diff.sl_hires_model",
 };
 
 function diffLabel(key) {
-    return CACHE_DIFF_LABELS[key] || key;
+    const k = CACHE_DIFF_LABEL_KEYS[key];
+    return k ? t(k) : key;
 }
 
 /**
@@ -323,20 +331,22 @@ function externalMismatchLine(data) {
     const rows = Array.isArray(data?.segments) ? data.segments : [];
     const bad = rows.filter((row) => !row?.matches);
     if (!bad.length) return "";
+    const sep = t("refine.listSep");
     const reasons = (row) => {
         const keys = (Array.isArray(row?.diff_keys) ? row.diff_keys : [])
             .filter((key) => key !== "<missing-cache>");
-        return keys.length ? keys.map(diffLabel).join("、") : "无缓存";
+        return keys.length ? keys.map(diffLabel).join(sep) : t("refine.mismatch.noCache");
     };
     if (bad.length === rows.length && rows.length > 1) {
-        const all = [...new Set(bad.flatMap((row) => reasons(row).split("、")))].join("、");
-        return `不匹配：全部 ${rows.length} 段（${all}）`;
+        const all = [...new Set(bad.flatMap((row) => reasons(row).split(sep)))].join(sep);
+        return t("refine.mismatch.all", { n: rows.length, reasons: all });
     }
-    const parts = bad.slice(0, 4).map(
-        (row) => `${row?.slot || `第 ${row?.segment} 段`}（${reasons(row)}）`,
-    );
-    if (bad.length > parts.length) parts.push(`…共 ${bad.length} 段`);
-    return `不匹配：${parts.join("、")}`;
+    const parts = bad.slice(0, 4).map((row) => t("refine.mismatch.entry", {
+        slot: row?.slot || t("refine.mismatch.segment", { n: row?.segment }),
+        reasons: reasons(row),
+    }));
+    if (bad.length > parts.length) parts.push(t("refine.mismatch.more", { n: bad.length }));
+    return t("refine.mismatch.some", { parts: parts.join(sep) });
 }
 
 function directorHasSigmasLink(node) {
@@ -403,43 +413,49 @@ function renderCacheStatus(node, data, kind = "normal") {
     const seeds = Array.isArray(data?.cached_seeds) && data.cached_seeds.length
         ? data.cached_seeds.join(", ")
         : "—";
-    const diffLabels = CACHE_DIFF_LABELS;
     const diffs = Array.isArray(data?.diff_keys)
         ? data.diff_keys
             .filter((key) => key !== "<missing-cache>")
             .slice(0, 8)
-            .map((key) => diffLabels[key] || key)
+            .map(diffLabel)
         : [];
     const selTotal = data?.selected_total;
     const selMatched = data?.selected_matched;
     const selActive = Number.isFinite(selTotal) && Number(selTotal) !== total;
     const lines = [
-        `一采缓存：${data?.exists ? `存在（${cached}/${total} 段）` : "不存在"}`,
-        `当前匹配：${data?.matches ? `是（${matched}/${total} 段）` : "否"}`
-            + (selActive ? ` · 选中 ${selMatched ?? 0}/${selTotal ?? 0}` : ""),
+        t("refine.cache.firstPass", {
+            state: data?.exists
+                ? t("refine.cache.present", { cached, total })
+                : t("refine.cache.absent"),
+        }),
+        t("refine.cache.match", {
+            state: data?.matches
+                ? t("refine.cache.matchYes", { matched, total })
+                : t("refine.cache.matchNo"),
+        }) + (selActive
+            ? t("refine.cache.selected", { sel: selMatched ?? 0, total: selTotal ?? 0 })
+            : ""),
     ];
-    lines.push(`缓存 seed：${seeds}`);
-    lines.push(`当前 seed：${data?.current_seed ?? "—"}`);
+    lines.push(t("refine.cache.seed", { seeds }));
+    lines.push(t("refine.cache.currentSeed", { seed: data?.current_seed ?? "—" }));
     const finalCached = Number(data?.final_cached_count || 0);
-    lines.push(`成片缓存：${finalCached}/${total} 段（含音频；部分重跑会接这里）`);
-    if (diffs.length) lines.push(`差异：${diffs.join("、")}`);
+    lines.push(t("refine.cache.finalCache", { n: finalCached, total }));
+    if (diffs.length) lines.push(t("refine.cache.differences", { list: diffs.join(t("refine.listSep")) }));
     if (data?.mode === "external_groups") {
         // External groups are not on the timeline: each segment is compared
         // against its own group (prompt / duration / its reference slots) plus
         // the plan-level knobs.
-        lines.push("核对方式：外接组");
+        lines.push(t("refine.cache.checkedExternal"));
         const mismatch = externalMismatchLine(data);
         if (mismatch) lines.push(mismatch);
     }
     const unverified = Number(data?.unverified_count || 0);
     if (unverified > 0) {
-        lines.push(`提示：${unverified} 段缓存未记录外接组信息（旧版写入），这些段会重采一次`);
+        lines.push(t("refine.cache.noteUnverified", { n: unverified }));
     }
     const staleExternal = Number(data?.stale_external_count || 0);
     if (staleExternal > 0) {
-        lines.push(
-            `提示：${staleExternal} 段缓存由外接组计划写入，当前未检测到外接组接线，这些段会重采一采`,
-        );
+        lines.push(t("refine.cache.noteStale", { n: staleExternal }));
     }
     ui.body.textContent = lines.join("\n");
 }
@@ -449,12 +465,12 @@ async function refreshFirstPassCacheStatus(node) {
     ensureFirstPassCacheUI(node);
     const director = connectedDirector(node);
     if (!director) {
-        renderCacheStatus(node, "未找到相连的 MiniMax H3 Director。", "warn");
+        renderCacheStatus(node, "No connected MiniMax H3 Director found.", "warn");
         return;
     }
     const seq = (node._mmxCacheStatusSeq || 0) + 1;
     node._mmxCacheStatusSeq = seq;
-    renderCacheStatus(node, "正在检查分段缓存…", "muted");
+    renderCacheStatus(node, "Checking segment cache…", "muted");
     try {
         const response = await api.fetchApi("/minimax/director/first_pass_cache_status", {
             method: "POST",
@@ -469,7 +485,7 @@ async function refreshFirstPassCacheStatus(node) {
         renderCacheStatus(node, data, data.matches ? "ok" : (data.exists ? "warn" : "muted"));
     } catch (error) {
         if (seq !== node._mmxCacheStatusSeq) return;
-        renderCacheStatus(node, `缓存检查失败：${error?.message || error}`, "error");
+        renderCacheStatus(node, `Cache check failed: ${error?.message || error}`, "error");
     }
 }
 
@@ -504,7 +520,7 @@ function ensureFirstPassCacheUI(node) {
     const header = document.createElement("div");
     header.style.cssText = "display:flex;align-items:center;justify-content:space-between;margin-bottom:5px";
     const title = document.createElement("strong");
-    title.textContent = "分段缓存状态";
+    title.textContent = t("refine.cache.title");
     const makeHeaderButton = (text, onClick) => {
         const btn = document.createElement("button");
         btn.type = "button";
@@ -519,12 +535,12 @@ function ensureFirstPassCacheUI(node) {
     };
     const buttons = document.createElement("div");
     buttons.style.cssText = "display:flex;align-items:center;gap:6px";
-    const clearBtn = makeHeaderButton("清理缓存", () => clearSegmentCache(node));
-    const refresh = makeHeaderButton("重新检查", () => refreshFirstPassCacheStatus(node));
+    const clearBtn = makeHeaderButton(t("refine.cache.clear"), () => clearSegmentCache(node));
+    const refresh = makeHeaderButton(t("refine.cache.recheck"), () => refreshFirstPassCacheStatus(node));
     buttons.append(clearBtn, refresh);
     const body = document.createElement("div");
     body.style.cssText = "white-space:pre-wrap;word-break:break-word;user-select:text;cursor:text";
-    body.textContent = "等待检查…";
+    body.textContent = t("refine.cache.waiting");
     for (const eventName of ["pointerdown", "mousedown", "click"]) {
         body.addEventListener(eventName, (event) => event.stopPropagation());
     }
@@ -546,13 +562,13 @@ function ensureFirstPassCacheUI(node) {
 async function clearSegmentCache(node) {
     const director = connectedDirector(node);
     if (!director) {
-        renderCacheStatus(node, "未找到相连的 MiniMax H3 Director。", "warn");
+        renderCacheStatus(node, "No connected MiniMax H3 Director found.", "warn");
         return;
     }
-    if (!window.confirm("确定清空这个节点的分段缓存吗？一采和成片都会删除，需要重新生成。")) {
+    if (!window.confirm("Clear this node's segment cache? Both first-pass and final caches will be deleted and must be regenerated.")) {
         return;
     }
-    renderCacheStatus(node, "正在清空缓存…", "muted");
+    renderCacheStatus(node, "Clearing cache…", "muted");
     try {
         const response = await api.fetchApi("/minimax/director/clear_segment_cache", {
             method: "POST",
@@ -563,10 +579,10 @@ async function clearSegmentCache(node) {
         if (!response.ok || data?.error) {
             throw new Error(data?.error || `HTTP ${response.status}`);
         }
-        renderCacheStatus(node, `缓存已清空（删除 ${data.removed} 个文件）。`, "ok");
+        renderCacheStatus(node, `Cache cleared (deleted ${data.removed} files).`, "ok");
         scheduleCacheStatusRefresh(node, 200);
     } catch (error) {
-        renderCacheStatus(node, `清空缓存失败：${error?.message || error}`, "error");
+        renderCacheStatus(node, `Failed to clear cache: ${error?.message || error}`, "error");
     }
 }
 

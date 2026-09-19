@@ -164,8 +164,8 @@ def require_euler(sampler_name: str, pack: dict[str, Any]) -> str:
         return "euler"
     if name.lower() not in EULER_NAMES:
         raise ValueError(
-            f"SelfLift 只支持 Euler（s_churn=0）。导演台当前采样器是 {name!r}。"
-            "请把导演台采样器改成 euler，或在 SelfLift 节点把「采样器」设为 euler。"
+            f"SelfLift only supports Euler (s_churn=0). The Director sampler is currently {name!r}. "
+            "Set the Director sampler to euler, or set \"Sampler\" on the SelfLift node to euler."
         )
     return name
 

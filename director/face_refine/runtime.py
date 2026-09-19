@@ -59,7 +59,7 @@ def apply_segment_face_refine(
     from ...lib.image_prep import assert_minimax_canvas, limit_ref_image_dict
 
     if frames is None or not isinstance(frames, torch.Tensor) or frames.ndim != 4:
-        raise ValueError("FaceRefine 需要解码后的视频帧。")
+        raise ValueError("FaceRefine requires decoded video frames.")
     base = frames[..., :3].contiguous().float().cpu()
     n_src = int(base.shape[0])
     crops, transform, track_note = track_and_crop(base, pack)
@@ -89,7 +89,7 @@ def apply_segment_face_refine(
     )
     size_arg = official_ref_image_size(resolve_ref_image_size(seg, plan))
     if audio_vae is None:
-        raise ValueError("FaceRefine 需要 audio_vae（与导演台 r2v 相同）。")
+        raise ValueError("FaceRefine requires audio_vae (the same one the Director uses for r2v).")
 
     positive, _negative, latent, cond_hint = run_minimax_conditioning(
         clip=clip,
@@ -133,7 +133,7 @@ def apply_segment_face_refine(
     )
     refined = _decode_video(sampled, vae)
     if refined.ndim != 4:
-        raise RuntimeError(f"FaceRefine decode 返回了非视频张量: {tuple(getattr(refined, 'shape', ()))}")
+        raise RuntimeError(f"FaceRefine decode returned a non-video tensor: {tuple(getattr(refined, 'shape', ()))}")
     refined = refined[: int(crops.shape[0]), ..., :3].float().cpu()
     if refined.shape[0] < crops.shape[0]:
         refined = _pad_frames(refined, crops.shape[0])

@@ -27,9 +27,9 @@ def assert_minimax_canvas(width: int, height: int) -> None:
         return
     nw, nh = ensure_minimax_canvas(max(w, 1), max(h, 1))
     raise ValueError(
-        f"输出分辨率 {w}×{h} 不是 32 的倍数（MiniMax H3 要求：VAE÷16 后再 2×2 patch）。"
-        f"请改为 {nw}×{nh}，或在输出面板重新选择最长边/固定尺寸后重跑。"
-        "若同时安装了独立的 ComfyUI-H3-Motion-Context，请卸载或禁用后重启 ComfyUI（与 Director 内置连贯冲突）。"
+        f"Output resolution {w}×{h} is not a multiple of 32 (MiniMax H3 requires: VAE÷16 then 2×2 patch)."
+        f"Change it to {nw}×{nh}, or re-pick the long edge / fixed size in the output panel and re-run."
+        "If the standalone ComfyUI-H3-Motion-Context is also installed, uninstall or disable it and restart ComfyUI (it conflicts with Director's built-in continuity)."
     )
 
 

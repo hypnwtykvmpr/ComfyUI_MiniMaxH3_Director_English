@@ -59,7 +59,7 @@ export const FL2V_STYLES = `
 .bd-fl2v-slot .ph{color:#666;font-size:10px;text-align:center;padding:4px;line-height:1.35;pointer-events:none}
 /* Clear sits outside the draggable slot so HTML5 DnD cannot steal the click. */
 .bd-fl2v-slot-wrap .x{position:absolute;right:1px;top:1px;width:24px;height:24px;padding:0;margin:0;border:0;box-sizing:border-box;display:none;align-items:center;justify-content:center;border-radius:4px;background:rgba(0,0,0,.78);color:#ff8a8a;font-size:18px;font-weight:700;line-height:1;cursor:pointer;z-index:6;user-select:none;-webkit-user-select:none;font-family:inherit;appearance:none;-webkit-appearance:none}
-/* End-slot clear stays top-left so it doesn't cover the top-right 尾帧 badge. */
+/* End-slot clear stays top-left so it doesn't cover the top-right end-frame badge. */
 .bd-fl2v-slot-wrap:has([data-slot="end"]) .x{left:1px;right:auto}
 .bd-fl2v-slot-wrap.has-img:hover .x,
 .bd-fl2v-slot-wrap:focus-within .x{display:flex}
@@ -188,7 +188,7 @@ export function newFl2vShot(overrides = {}) {
             ? { externalNodeId: overrides.externalNodeId }
             : {}),
     };
-    // Must survive syncFl2vFromShots → newFl2vShot(); dropping it made 引用上段
+    // Must survive syncFl2vFromShots → newFl2vShot(); dropping it made Reference previous segment
     // appear stuck (commit rebuilt shots and defaulted back to on).
     if (overrides.continuityFromPrev != null || overrides.continuity_from_prev != null) {
         shot.continuityFromPrev = overrides.continuityFromPrev ?? overrides.continuity_from_prev;
@@ -386,7 +386,7 @@ export function flattenFl2vShotsToKeyframes(editor) {
             });
         } else if (hasEnd && !hasStart) {
             // Official last-only. Mark endOnly so legacy _expand_shots does not
-            // treat this as 首尾同图 (image0=image1).
+            // treat this as same start/end image (image0=image1).
             keyframes.push({
                 id: shot.id || uid(),
                 imageFile: endImage.imageFile || "",
@@ -745,14 +745,14 @@ export function mountFl2vPanel(parent) {
     wrap.className = "bd-fl2v-detail-wrap";
     wrap.innerHTML = `
         <div class="bd-fl2v-hint" data-r="fl2v-hint">
-            <b data-i18n="panel.fl2v.howToTitle">怎么用</b>：
+            <b data-i18n="panel.fl2v.howToTitle">How to use</b>：
             <span data-i18n-html="panel.fl2v.hint"></span>
         </div>
         <div class="bd-fl2v-workbench" data-r="fl2v-workbench">
             <div class="bd-fl2v-shots" data-r="fl2v-shots"></div>
         </div>
         <div class="bd-fl2v-detail hidden" data-r="fl2v-detail">
-            <span class="bd-label" data-i18n="panel.fl2v.shotPrompt">本镜提示词</span>
+            <span class="bd-label" data-i18n="panel.fl2v.shotPrompt">Shot prompt</span>
             <textarea data-r="fl2v-prompt" data-i18n-placeholder="placeholder.fl2vShot" placeholder=""></textarea>
             <textarea data-r="fl2v-negative" class="hidden" hidden aria-hidden="true"></textarea>
         </div>
@@ -830,7 +830,7 @@ export function flushFl2vPromptDraft(editor) {
     if (ui.negative) shot.negativePrompt = ui.negative.value || "";
 }
 
-/** Output canvas W/H for shot-slot aspect-ratio (matches 输出分辨率). */
+/** Output canvas W/H for shot-slot aspect-ratio (matches Output resolution). */
 export function getFl2vOutputSize(editor) {
     const out = editor?.timeline?.output || {};
     let w = parseInt(out.width, 10) || 0;
@@ -875,7 +875,7 @@ export function swapFl2vShots(editor, fromIndex, toIndex) {
 
 function bindFl2vShotCardDnD(editor, cardEl, shotIndex) {
     // Drag only the title — never the header checkbox. Nearby draggable=true
-    // swallows 引用上段 clicks on Windows.
+    // swallows Reference previous segment clicks on Windows.
     cardEl.draggable = false;
     const handles = cardEl.querySelectorAll(".bd-fl2v-shot-drag");
     if (handles.length) {
@@ -1024,12 +1024,12 @@ export function transferFl2vSlotImage(editor, fromShot, fromSlot, toShot, toSlot
     if (!srcImg?.imageFile) return false;
 
     if (fromShot === toShot) {
-        // 组内：互换（目标空则等于移动）
+        // Same group: swap (empty target = move)
         const dstImg = getFl2vSlotImage(dst, toSlot);
         setFl2vSlotImage(src, fromSlot, cloneFl2vImageRef(dstImg));
         setFl2vSlotImage(dst, toSlot, cloneFl2vImageRef(srcImg));
     } else {
-        // 组间：复制到目标（源保留）
+        // Cross group: copy to target (keep source)
         setFl2vSlotImage(dst, toSlot, cloneFl2vImageRef(srcImg));
     }
     syncFl2vFromShots(editor);

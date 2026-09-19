@@ -88,7 +88,7 @@ def _normalize_audio(audio: dict[str, Any] | None) -> dict[str, Any] | None:
             wave = wave[:, :2, :]
         return {"waveform": wave.contiguous(), "sample_rate": sr}
     except Exception as exc:
-        log.warning("参考音频归一化到 44.1k 立体声失败（%s）；按原始格式 mux。", exc)
+        log.warning("Failed to normalize reference audio to 44.1k stereo (%s); muxing in original format.", exc)
         return audio
 
 
@@ -271,11 +271,11 @@ def _segment_frame_counts_for_audio(
     *,
     frame_counts: list[int] | None = None,
 ) -> list[int]:
-    """Per-segment frame lengths used to stitch generated audio under「全部导出」.
+    """Per-segment frame lengths used to stitch generated audio under Export all.
 
     Prefer explicit ``frame_counts`` (actual export chunk lengths). Never silently
     even-split the whole timeline across a partial audio list — that desyncs A/V
-    after「选择运行」partial re-runs.
+    after Select to run partial re-runs.
     """
     if frame_counts is not None and len(frame_counts) == n_audios:
         return [max(0, int(c)) for c in frame_counts]
@@ -366,6 +366,7 @@ def build_director_audio_outputs(
     segment_frame_counts: list[int] | None = None,
     audio_mode: str | None = None,
     mute_audio: bool = False,
+    kept_positions: list[int] | None = None,
 ) -> tuple[list[dict[str, Any]], str | None]:
     """Return (AUDIO list, source_fallback).
 
@@ -384,8 +385,8 @@ def build_director_audio_outputs(
 
     # Prefer model audio only in generate mode.
     if mode == AUDIO_MODE_GENERATE and segment_audios:
-        # 「全部导出」合并画面时 images_out 只有 1 条，必须把各组音频按时间轴拼接，
-        # 否则只会用第 1 组音频并静音填充后半段（第二组及之后无声）。
+        # When Export all merges images, images_out has only one clip, so each group's audio must be joined along the timeline,
+        # otherwise only the first group's audio is used and the rest is filled with silence (groups 2+ have no sound).
         # Also merge when a single clip is present but we still have a full
         # timeline audio table (partial re-run + cached audio restore).
         merge_all = (
@@ -450,6 +451,13 @@ def build_director_audio_outputs(
             seg_indices = sorted(plan.run_indices)
         else:
             seg_indices = list(range(len(plan.segments)))
+        # images_out may have been filtered down to the slots whose pixels were
+        # not released to disk. Apply the same filter, or segment #1's source
+        # audio ends up under segment #N's picture.
+        if kept_positions is not None:
+            seg_indices = [
+                seg_indices[i] for i in kept_positions if 0 <= i < len(seg_indices)
+            ]
         outputs = []
         for i, tensor in enumerate(images_out):
             if i >= len(seg_indices):
@@ -471,7 +479,7 @@ def build_director_audio_outputs(
                 )
                 # Soft fallback: silent only (do not substitute model audio).
                 log.warning(
-                    "声音=使用原声，但片段 #%s 无源音轨（%s）；已回退为静音。",
+                    "Audio=source, but segment #%s has no source audio track (%s); falling back to silence.",
                     seg.index + 1, hint,
                 )
                 extracted = None
@@ -513,7 +521,7 @@ def build_director_audio_outputs(
         hint = diagnose_source_audio_failure(timeline, 0, end, fps)
         # Soft fallback after a successful video run: silent only (no model audio).
         log.warning(
-            "声音=使用原声，但源视频无音轨（%s）；已回退为静音。",
+            "Audio=source, but the source video has no audio track (%s); falling back to silence.",
             hint,
         )
         extracted = None

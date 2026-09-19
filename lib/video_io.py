@@ -439,7 +439,7 @@ def _resolve_load_dimensions(
             return sw, sh, False
 
         # Portrait-native video must not be rotated into a landscape target (common when
-        # browser metadata or node defaults supply 832脳480 for a vertical phone clip).
+        # browser metadata or node defaults supply 832×480 for a vertical phone clip).
         if native_portrait and storage_landscape:
             log.info(
                 "Video %dx%d portrait native vs storage %dx%d landscape; keeping orientation",
@@ -459,7 +459,7 @@ def _resolve_load_dimensions(
         # Landscape-native with portrait storage (rotation metadata in container).
         if native_landscape and storage_portrait and _aspect_close(transposed_ar, storage_ar):
             log.info(
-                "Video %dx%d landscape native vs storage %dx%d portrait; applying 90掳 rotation",
+                "Video %dx%d landscape native vs storage %dx%d portrait; applying 90° rotation",
                 source_w,
                 source_h,
                 sw,
@@ -469,7 +469,7 @@ def _resolve_load_dimensions(
 
         if _aspect_close(transposed_ar, storage_ar):
             log.info(
-                "Video %dx%d decoded transposed vs storage %dx%d; applying 90掳 rotation before scale",
+                "Video %dx%d decoded transposed vs storage %dx%d; applying 90° rotation before scale",
                 source_w,
                 source_h,
                 sw,
@@ -717,7 +717,7 @@ def load_reference_video_clip(
 
 
 def load_timeline_segment(timeline: dict, start: int, end: int) -> torch.Tensor:
-    """Decode only logical frames in [start, end) 鈥?supports arbitrarily long timelines."""
+    """Decode only logical frames in [start, end) — supports arbitrarily long timelines."""
     total = logical_frame_count(timeline)
     start = max(0, min(int(start), total))
     end = max(start, min(int(end), total))

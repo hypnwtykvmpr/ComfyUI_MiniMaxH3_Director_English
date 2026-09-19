@@ -1,6 +1,6 @@
-# 中文文档已移至默认 README
+# Documentation
 
-本仓库默认文档为中文，请直接查看：
+This repository's documentation is written in English.
 
 → **[README.md](README.md)**
 

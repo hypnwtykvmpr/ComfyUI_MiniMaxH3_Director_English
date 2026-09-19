@@ -1,13 +1,13 @@
-"""Incremental per-segment MP4 export for「分段导出」runs.
+"""Incremental per-segment MP4 export for Export All / per-segment runs.
 
 Best-effort: encode failures must never abort generation. Each run uses a
 timestamp folder: ``output/minimax_seg_export/<YYYYMMDD_HHMMSS>/``.
 
 Files:
   ``seg_XXXX.mp4`` — final clip (last refine pass / no Refine; FaceRefine stitch if wired)
-  ``seg_XXXX_pre.mp4`` — first pass (一采), only when Refine ran
-  ``seg_XXXX_pN.mp4`` — refine pass N (分段导出且次数>1)
-  ``seg_XXXX_facepre.mp4`` — before FaceRefine stitch, only when「输出修脸前」is on
+  ``seg_XXXX_pre.mp4`` — first pass, only when Refine ran
+  ``seg_XXXX_pN.mp4`` — refine pass N (segments mode with more than one pass)
+  ``seg_XXXX_facepre.mp4`` — before the FaceRefine stitch, only when "Export pre-face-refine" is on
 """
 
 from __future__ import annotations
@@ -69,12 +69,12 @@ def segment_mp4_path(run_dir: Path, seg: SegmentPlan, *, suffix: str = "") -> Pa
 def mp4_export_kind(path: str | None) -> str:
     name = Path(str(path or "")).name
     if name.endswith("_facepre.mp4"):
-        return "修脸前 mp4"
+        return "pre-face-refine mp4"
     if name.endswith("_pre.mp4"):
-        return "一采 mp4"
+        return "first-pass mp4"
     m = re.search(r"_p(\d+)\.mp4$", name)
     if m:
-        return f"第{m.group(1)}轮精修 mp4"
+        return f"refine pass {m.group(1)} mp4"
     return "mp4"
 
 

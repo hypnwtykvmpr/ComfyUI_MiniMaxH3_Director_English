@@ -10,8 +10,8 @@ REF_AUDIO_KEY_PREFIX = "ref_audio_"
 
 
 def reference_audio_label(index: int) -> str:
-    """User-facing label for slot index (0-based) → 音频1…音频3."""
-    return f"音频{int(index) + 1}"
+    """User-facing label for slot index (0-based) → Audio 1…Audio 3."""
+    return f"Audio {int(index) + 1}"
 
 
 def reference_audio_prompt_tag(index: int) -> str:

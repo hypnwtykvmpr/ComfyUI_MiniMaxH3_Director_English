@@ -69,10 +69,29 @@ def _unpack_node_output(out):
 
 
 def _use_basic_guider(cfg: float, negative) -> bool:
-    """Official r2v template uses BasicGuider (no CFG)."""
+    """Official r2v template uses BasicGuider (no CFG).
+
+    CFG is only defined against a negative conditioning. With an empty
+    negative, CFGGuider does not guide -- ComfyUI seeds ``out_counts`` at
+    1e-37, nothing accumulates, so ``uncond_pred`` is exactly zero and
+    ``cfg_function`` returns ``uncond_pred + (cond_pred - uncond_pred) * cfg``
+    == ``cfg * cond_pred``. That scales the denoised prediction every step
+    rather than guiding it: cfg=2 doubles x0 and the clip blows out.
+
+    Nothing in this pack populates negative (``run_minimax_conditioning``
+    returns ``[]``), so an empty negative must fall back to BasicGuider
+    instead of silently multiplying the result.
+    """
     if negative:
         return False
-    return abs(float(cfg) - 1.0) < 1e-6
+    if abs(float(cfg) - 1.0) >= 1e-6:
+        log.warning(
+            "cfg=%s ignored: this pack builds no negative conditioning, and CFG "
+            "without one scales the result by cfg instead of guiding it. "
+            "Sampling with BasicGuider (cfg=1.0).",
+            cfg,
+        )
+    return True
 
 
 class ShiftedModelCache:

@@ -10,8 +10,8 @@ REF_IMAGE_KEY_PREFIX = "reference_image_"
 
 
 def reference_image_label(index: int) -> str:
-    """User-facing label for slot index (0-based) → 图片1…图片9."""
-    return f"图片{int(index) + 1}"
+    """User-facing label for slot index (0-based) → Picture 1…Picture 9."""
+    return f"Picture {int(index) + 1}"
 
 
 def reference_image_input_types() -> dict:
@@ -21,7 +21,7 @@ def reference_image_input_types() -> dict:
             "IMAGE",
             {
                 "tooltip": (
-                    f"Reference image for <Picture {index + 1}> / {reference_image_label(index)}. "
+                    f"Reference image for <Picture {index + 1}> ({reference_image_label(index)}). "
                     f"Long edge ≤ ref_max_size, native aspect kept."
                 ),
             },
@@ -52,7 +52,7 @@ def _slot_number(key: str) -> int:
 def sorted_reference_items(
     extra_refs: dict[str, torch.Tensor | None],
 ) -> list[tuple[str, torch.Tensor]]:
-    """Return connected reference images in slot order (图片1…图片9)."""
+    """Return connected reference images in slot order (Picture 1…Picture 9)."""
     items: list[tuple[str, torch.Tensor]] = []
     for key, value in extra_refs.items():
         if value is not None and value.shape[0] > 0:

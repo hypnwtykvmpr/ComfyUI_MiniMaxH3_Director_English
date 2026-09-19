@@ -143,8 +143,8 @@ def _upscale_with_rtx_vsr(
         import nvvfx
     except ImportError as exc:
         raise ImportError(
-            "nvidia_rtx_vsr 需要 nvidia-vfx，并使用兼容的 NVIDIA GPU。"
-            "可 pip install nvidia-vfx，或把 upscale_method 改回 lanczos。"
+            "nvidia_rtx_vsr requires nvidia-vfx and a compatible NVIDIA GPU."
+            "Run `pip install nvidia-vfx`, or switch upscale_method back to lanczos."
         ) from exc
 
     quality = getattr(getattr(nvvfx, "effects", None), "QualityLevel", None)
@@ -739,7 +739,7 @@ def apply_segment_refine(
         sigma_list = refine_sigmas_override(pack)
         if sigma_list is None:
             raise ValueError(
-                "Refine 二采需要把 BasicScheduler 或 ManualSigmas 接到 sigmas 口。"
+                "Refine second pass needs a BasicScheduler or ManualSigmas wired to the sigmas input."
             )
         sigma_sampler = str(pack.get("sampler") or "euler")
         sigma_steps = max(1, len(sigma_list) - 1)

@@ -43,14 +43,14 @@ def load_detector(name: str):
                 break
     if path is None:
         raise FileNotFoundError(
-            f"FaceRefine 检测器 '{name}' 未找到。请将 face_yolov8m.pt 放到 "
-            "models/ultralytics/bbox/（或安装 ultralytics 后放入该目录）。"
+            f"FaceRefine detector '{name}' not found. Put face_yolov8m.pt into "
+            "models/ultralytics/bbox/ (or install ultralytics and place it there)."
         )
     try:
         from ultralytics import YOLO
     except ImportError as exc:
         raise ImportError(
-            "FaceRefine 需要 ultralytics。请执行: pip install ultralytics"
+            "FaceRefine requires ultralytics. Run: pip install ultralytics"
         ) from exc
     model = YOLO(path)
     _DETECTOR_CACHE[name] = model
@@ -116,6 +116,41 @@ def affine_crop(img: torch.Tensor, box: tuple, cw: int, ch: int) -> torch.Tensor
     grid = F.affine_grid(theta, (1, 3, int(ch), int(cw)), align_corners=False)
     out = F.grid_sample(src, grid, mode="bilinear", padding_mode="border", align_corners=False)
     return out.movedim(1, -1).to(img.dtype)
+
+
+def face_rect_in_canvas(
+    box: tuple,
+    *,
+    face_cx: float,
+    face_cy: float,
+    face_w: float,
+    face_h: float,
+    canvas_w: int,
+    canvas_h: int,
+) -> tuple[float, float, float, float]:
+    """Where the face lands inside its crop canvas, as (x, y, w, h).
+
+    ``box`` is the source-pixel crop (x, y, bw, bh) that ``affine_crop`` maps
+    onto the canvas, so a source point p maps to ``(p - box_origin) / box_size
+    * canvas_size``.
+
+    The face is NOT reliably at the canvas centre: ``track_faces`` clamps the
+    crop origin to the frame, so any face near an edge -- or any face tall
+    enough that bh was capped to the frame height (crop_factor 2.5 on a
+    480-tall canvas caps every face over 192px, i.e. an ordinary close-up) --
+    sits off-centre. Assuming centre put the paste mask beside the real face,
+    leaving it un-refined next to a visible patch of re-sampled pixels.
+
+    For an unclamped crop ``x == face_cx - bw/2``, so this reduces exactly to
+    the old ``canvas_w * 0.5 - 0.5 * face_w_scaled`` expression.
+    """
+    bw = max(float(box[2]), 1e-6)
+    bh = max(float(box[3]), 1e-6)
+    cx = (face_cx - float(box[0])) / bw * canvas_w
+    cy = (face_cy - float(box[1])) / bh * canvas_h
+    w = face_w / bw * canvas_w
+    h = face_h / bh * canvas_h
+    return (cx - 0.5 * w, cy - 0.5 * h, w, h)
 
 
 def gaussian_blur_mask(mask: torch.Tensor, feather: int) -> torch.Tensor:
@@ -198,7 +233,7 @@ def track_and_crop(
 ) -> tuple[torch.Tensor, dict[str, Any], str]:
     """Return (crops [K,ch,cw,3], transform, report)."""
     if images.ndim != 4 or images.shape[0] < 1:
-        raise ValueError("FaceRefine 需要 IMAGE 视频帧 [N,H,W,C]。")
+        raise ValueError("FaceRefine requires IMAGE video frames [N,H,W,C].")
     frames = images[..., :3].contiguous()
     n_frames, height, width, _ = frames.shape
     detector = load_detector(str(pack.get("detector") or "face_yolov8m.pt"))
@@ -250,7 +285,8 @@ def track_and_crop(
 
     if found == 0:
         raise ValueError(
-            "FaceRefine 未检测到人脸。请换检测器、降低 confidence，或确认成片里有可见的脸。"
+            "FaceRefine detected no face. Try a different detector, lower the confidence, "
+            "or confirm the finished clip actually shows a visible face."
         )
 
     raw_cx = _interp_gaps(cx, valid)
@@ -289,13 +325,15 @@ def track_and_crop(
     weights = np.clip(_smooth(valid.astype(np.float64), 11), 0.0, 1.0)
     face_rect = []
     for i, box in enumerate(boxes):
-        bw, bh = max(box[2], 1e-6), max(box[3], 1e-6)
         face_rect.append(
-            (
-                float(canvas_w) * 0.5 - 0.5 * float(sm_fw[i]) / bw * canvas_w,
-                float(canvas_h) * 0.5 - 0.5 * float(sm_sz[i]) / bh * canvas_h,
-                float(sm_fw[i]) / bw * canvas_w,
-                float(sm_sz[i]) / bh * canvas_h,
+            face_rect_in_canvas(
+                box,
+                face_cx=float(sm_cx[i]),
+                face_cy=float(sm_cy[i]),
+                face_w=float(sm_fw[i]),
+                face_h=float(sm_sz[i]),
+                canvas_w=canvas_w,
+                canvas_h=canvas_h,
             )
         )
     transform = {

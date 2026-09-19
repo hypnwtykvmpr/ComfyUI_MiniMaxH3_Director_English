@@ -219,7 +219,17 @@ def _build_minimax_inputs(
         # promote clip_frames[0] into first_frame.
         if first_frame is not None and last_frame is None and clip_frames is not None:
             # Start+end endpoint hold: last may only live on the clip tail.
-            if clip_frames.shape[0] >= 2:
+            #
+            # Only when that tail is a real end frame. _build_fl2v_endpoint_source
+            # holds the start image across the whole clip and overwrites the tail
+            # only when an end image exists, so for a start-only shot the tail IS
+            # the start image. Promoting it sets last_frame == first_frame and
+            # hard-locks the shot to return to its opening frame -- a rubber-band
+            # loop instead of the free i2v motion the user asked for, while the
+            # prompt built alongside it says has_end_frame=False.
+            if clip_frames.shape[0] >= 2 and not torch.equal(
+                clip_frames[:1], clip_frames[-1:]
+            ):
                 last_frame = clip_frames[-1:].clone()
     elif task_key == "i2v":
         # Explicit per-segment image wins; motion-context path leaves first_frame empty
@@ -253,7 +263,7 @@ def _build_minimax_inputs(
         ref_video_audios = _ref_video_audios_to_dict(getattr(seg, "ref_video_audios", None) or [])
     elif task_key in {"v2v", "rv2v"}:
         # Bernini-style video edit: each timeline segment's source clip → <Video 1>.
-        # rv2v additionally injects 图片1–9 / 音频1–3 as <Picture N> / <Audio J>.
+        # rv2v additionally injects pictures 1–9 / audios 1–3 as <Picture N> / <Audio J>.
         if clip_frames is None or clip_frames.shape[0] <= 0:
             raise ValueError(
                 f"{task_key} segment #{seg.index + 1} has no source frames. "
@@ -314,7 +324,7 @@ def _prune_continuity_working_set(
 ) -> None:
     """Keep only the direct predecessor needed by the next segment.
 
-    Final/pre-refine frames are released separately in「分段导出」after the
+    Final/pre-refine frames are released separately in segments mode after the
     next pin. A missing direct predecessor is loaded from disk cache.
     """
     current = int(next_segment_index)
@@ -451,9 +461,9 @@ def execute_director_plan_core(
 
     all_segments = plan.segments
     # Drop caches for deleted/shortened timelines. Use every segment index (not
-    # run_indices): unselected「选择运行」slots still fill merge/export from disk.
+    # run_indices): unselected Select to run slots still fill merge/export from disk.
     prune_segment_cache(node_id, [seg.index for seg in all_segments])
-    # Strictly honor「选择运行」— never force-sample unselected segments.
+    # Strictly honor Select to run — never force-sample unselected segments.
     run_indices = plan.run_indices if plan.run_indices is not None else frozenset(range(len(all_segments)))
 
     run_list = sorted(run_indices)
@@ -482,14 +492,14 @@ def execute_director_plan_core(
     if first_pass_sigmas is not None:
         sigma_steps = max(0, len(first_pass_sigmas) - 1)
         reports.append(
-            f"Sample: 外接 SIGMAS（{sigma_steps} 步）→ MiniMaxH3SigmaShift(model) → "
-            "BasicGuider/CFGGuider → SamplerCustomAdvanced。"
-            "导演台步数/调度器已忽略。"
+            f"Sample: external SIGMAS ({sigma_steps} steps) → MiniMaxH3SigmaShift(model) → "
+            "BasicGuider/CFGGuider → SamplerCustomAdvanced. "
+            "Director steps/scheduler ignored."
         )
     else:
         if sigmas is not None:
             reports.append(
-                "Sample: 外接 SIGMAS 无效（至少需要 2 个数），回退步数 + 调度器。"
+                "Sample: external SIGMAS invalid (needs at least 2 values); falling back to steps + scheduler."
             )
         reports.append(
             "Sample: official MiniMaxH3SigmaShift → BasicScheduler → "
@@ -501,24 +511,24 @@ def execute_director_plan_core(
     if mp4_run_dir is not None:
         reports.append(f"Segment mp4 export dir: {mp4_run_dir}")
     if live_tae_preview:
-        reports.append("Live preview: ON — 采样中 TAE 动态预览（成片看下游 CreateVideo / SaveVideo）。")
+        reports.append("Live preview: ON — TAE dynamic preview during sampling (see CreateVideo / SaveVideo downstream for the final).")
     else:
-        reports.append("Live preview: OFF — 跳过采样预览。")
+        reports.append("Live preview: OFF — skip sampling preview.")
     shift_cache = ShiftedModelCache()
     if clear_vram_between_segments:
-        reports.append("VRAM: 段间清理显存已开启（最后一段不清理）。")
+        reports.append("VRAM: clear between segments is on (the last segment is not cleared).")
     if clear_vram_before_refine:
-        reports.append("VRAM: 二采前清理显存已开启（一采结束后、二采开始前卸载模型）。")
+        reports.append("VRAM: clear before the second pass is on (unload the model after the first pass and before the second pass).")
     if clear_vram_before_face_refine:
-        reports.append("VRAM: 脸修前清理显存已开启（解码后、FaceRefine 开始前卸载模型）。")
+        reports.append("VRAM: clear before face refine is on (unload the model after decode and before FaceRefine starts).")
     if export_pre_face_refine:
         extra = (
-            "；分段导出另存 seg_XXXX_facepre.mp4"
+            "; segmented export also saves seg_XXXX_facepre.mp4"
             if getattr(plan, "export_mode", "all") == "segments"
             else ""
         )
         reports.append(
-            f"Output: 输出修脸前已开启（images_pre_face_refine 为贴回前整段视频{extra}）。"
+            f"Output: pre-face-refine output is on (images_pre_face_refine is the whole clip before the paste-back{extra})."
         )
     if audio_mode == AUDIO_MODE_MUTE:
         reports.append("Audio: muted — skip audio VAE decode, silent AUDIO output.")
@@ -591,7 +601,7 @@ def execute_director_plan_core(
     # completed_* also get export-fill hydrations from disk; this set does not.
     resampled_this_run: set[int] = set()
     held_for_confirmation = False
-    # True export lengths (post continuity trim). Kept after「分段导出」
+    # True export lengths (post continuity trim). Kept after segments mode
     # replaces older IMAGE slots with 1-frame posters.
     segment_export_lengths: dict[int, int] = {}
     export_segments_mode = plan.export_mode == "segments"
@@ -674,9 +684,9 @@ def execute_director_plan_core(
         if continuity_active:
             if prev_idx in passthrough_indices:
                 raise ValueError(
-                    f"段间连贯：片段 #{seg.index + 1} 的前一段 #{prev_idx + 1} "
-                    "是源视频透传（未采样/无有效缓存），不能作为 motion context。"
-                    "请先运行该段，或将其纳入「选择运行」。"
+                    f"Segment continuity: segment #{seg.index + 1}'s previous segment #{prev_idx + 1} "
+                    "is source-video passthrough (not sampled / no valid cache) and cannot be used as motion context. "
+                    "Run that segment first, or include it in Select to run."
                 )
             prev_seg = all_segments[prev_idx] if prev_idx >= 0 else None
             prev_from_this_run = prev_idx in resampled_this_run
@@ -696,7 +706,7 @@ def execute_director_plan_core(
                 )
                 prev_tail = None
             # Hydrate prev into completed_* so phase-align trim can rewrite
-            # in-memory exports + disk cache even on「分段导出」/ partial re-run
+            # in-memory exports + disk cache even on segments mode / partial re-run
             # (resolve_prev may return a cache tensor without storing it).
             if prev_idx >= 0 and prev_tail is not None and prev_idx not in completed_outputs:
                 completed_outputs[prev_idx] = prev_tail
@@ -738,14 +748,14 @@ def execute_director_plan_core(
             if prev_av is None and prev_tail is None:
                 reports.append(
                     f"Segment {seg.index + 1}/{timeline_seg_total}: "
-                    "上一段无有效缓存，已跳过段间引导"
-                    "（重跑上一段或将其纳入「选择运行」可恢复衔接）"
+                    "No valid cache for the previous segment; skipped segment continuity "
+                    "(re-run the previous segment or include it in Select to run to restore the join)"
                 )
             elif not prev_from_this_run:
                 reports.append(
                     f"Segment {seg.index + 1}/{timeline_seg_total}: "
-                    f"引导接自上一段 #{prev_idx + 1} 的磁盘缓存"
-                    "（该段本轮未重跑；接缝对齐成片中的旧结果）"
+                    f"Guide pinned from previous segment #{prev_idx + 1}'s disk cache "
+                    "(that segment was not re-run this round; the seam aligns to the old result in the final video)"
                 )
             if prev_handoff:
                 prev_end_frame = handoff_end_frame(
@@ -1135,7 +1145,7 @@ def execute_director_plan_core(
             )
 
         def _report_step_preview(step: int, total_steps: int, x0) -> None:
-            # Live clip for the batch-card / 采样预览 slot (KJNodes-style looping WebP).
+            # Live clip for the batch-card / sampling preview slot (KJNodes-style looping WebP).
             try:
                 from .tae_preview import (
                     LIVE_PREVIEW_FPS,
@@ -1179,8 +1189,8 @@ def execute_director_plan_core(
             if isinstance(cached_low, dict) and "samples" in cached_low:
                 completed_low_carry[seg.index] = cached_low
             reports.append(
-                f"Segment {ui_idx + 1}/{timeline_seg_total}: 命中一采缓存 "
-                f"(seed={int(getattr(plan, 'sample_seed', seed) or seed)})，跳过一采，开始二采"
+                f"Segment {ui_idx + 1}/{timeline_seg_total}: first-pass cache hit "
+                f"(seed={int(getattr(plan, 'sample_seed', seed) or seed)}); skipping first pass, starting second pass"
             )
         elif selflift_will_run(plan, seg):
             samples, low_carry = sample_selflift_stage(
@@ -1382,8 +1392,8 @@ def execute_director_plan_core(
             )
         elif hold_after_first:
             refine_note = (
-                f"先确认一采（已缓存 seed={int(getattr(plan, 'sample_seed', seed) or seed)}，未二采；"
-                "用同一 seed 再 Queue 将只跑二采）"
+                f"Confirm first pass (cached seed={int(getattr(plan, 'sample_seed', seed) or seed)}, no second pass yet; "
+                "Queue again with the same seed to run only the second pass)"
             )
         else:
             refine_note = ""
@@ -1402,7 +1412,7 @@ def execute_director_plan_core(
         decoded, audio_dict = _decode_av_latent(
             samples, vae, audio_vae, decode_audio=decode_audio,
         )
-        # Default: crop free region back to UI length. 「保完整」keeps sample-trim
+        # Default: crop free region back to UI length. Keep full keeps sample-trim
         # (the 17k+5 remainder). Next pin uses trim+export.
         export_len = continuity_export_len(
             trim_frames=trim_frames,
@@ -1451,7 +1461,7 @@ def execute_director_plan_core(
                 if same_pre:
                     pre_chunk = chunk
                 elif pre_chunk is not None:
-                    # 一采 must grade against the previous 一采 tail. Using the
+                    # first pass must grade against the previous first pass tail. Using the
                     # refined export here pulls 864 openings toward a 1376
                     # second-pass look and makes the first-pass join pop.
                     prev_pre = completed_pre_refine.get(prev_idx)
@@ -1562,7 +1572,7 @@ def execute_director_plan_core(
         completed_refine_passes[seg.index] = pass_clips
         segment_export_lengths[seg.index] = int(chunk.shape[0])
 
-        #「分段导出」: flush mp4 as soon as this segment succeeds (crash-safe).
+        # Segments export: flush mp4 as soon as this segment succeeds (crash-safe).
         # Confirmation hold has no final/second-pass clip yet: save only _pre.
         if hold_after_first:
             pre_path = maybe_export_segment_mp4(
@@ -1575,7 +1585,7 @@ def execute_director_plan_core(
             )
             mp4_paths = [pre_path] if pre_path else []
         else:
-            # Final clip = last refine pass; _pre = 一采; _pN = each refine round.
+            # Final clip = last refine pass; _pre = first pass; _pN = each refine round.
             mp4_paths = maybe_export_segment_mp4s(
                 mp4_run_dir,
                 plan,
@@ -1695,8 +1705,8 @@ def execute_director_plan_core(
             cached = cached.float()
             completed_outputs[seg.index] = cached
             # images_pre_refine fill prefers the first-pass render (.pre.pt) so
-            #「选择运行」re-roll previews merge all-first-pass frames instead of
-            # mixing fresh 一采 with cached 二采. Falls back to the final render
+            # Select to run re-roll previews merge all-first-pass frames instead of
+            # mixing fresh first pass with cached second pass. Falls back to the final render
             # when no first-pass cache exists (e.g. refine was never connected).
             pre_fill = load_first_pass_frames_stale(
                 node_id, seg, plan, match_len=int(cached.shape[0])
@@ -1770,13 +1780,13 @@ def execute_director_plan_core(
         reports.append(
             "Passthrough (not sampled) segment(s) "
             f"{[i + 1 for i in passthrough_indices]} — run selection is honored; "
-            "unselected gaps filled from cache/source for「全部导出」."
+            "unselected gaps filled from cache/source for Export all."
         )
     if skipped_no_cache:
         reports.append(
             "Skipped segment(s) with no cache "
-            f"{skipped_no_cache} — omitted from「全部导出」merge "
-            "(勾选重跑或先全跑可补上)."
+            f"{skipped_no_cache} — omitted from Export all merge "
+            "(re-check and re-run them, or run all first to fill them in)."
         )
 
     if not output_chunks and not segment_outputs:
@@ -1822,7 +1832,7 @@ def execute_director_plan_core(
             "Re-run them once (or run all) to refresh audio cache."
         )
     export_frame_counts = [int(c.shape[0]) for c in export_chunks]
-    # segment_outputs path (分段导出 / image batch): keep run-order audios.
+    # segment_outputs path (segments export / image batch): keep run-order audios.
     if plan.export_mode == "all" and output_chunks:
         segment_audios = export_audios
     else:

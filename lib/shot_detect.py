@@ -11,7 +11,7 @@ log = logging.getLogger("ComfyUI-MiniMaxH3-Director.shot_detect")
 
 MIN_SEG_FRAMES = 4
 
-# AdaptiveDetector.adaptive_threshold 鈥?higher = fewer cuts.
+# AdaptiveDetector.adaptive_threshold — higher = fewer cuts.
 _SENSITIVITY_THRESHOLD = {
     "low": 4.5,
     "medium": 3.0,
@@ -167,7 +167,7 @@ def detect_timeline_shot_cuts(
 
     timeline_fps = float(frame_rate) if frame_rate and frame_rate > 0 else 24.0
     min_shot = max(MIN_SEG_FRAMES, int(min_shot_frames or MIN_SEG_FRAMES))
-    # Source min_scene_len roughly matches logical min at native鈮坱imeline fps.
+    # Source min_scene_len roughly matches logical min at native ≥ timeline fps.
     min_scene_len_src = max(MIN_SEG_FRAMES, min_shot)
 
     logical_cuts: list[int] = [0, total]

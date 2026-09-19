@@ -1,6 +1,6 @@
 """Cross-segment continuity helpers for MiniMax H3 Director.
 
-Active path (opt-in「段间引导」): motion-context pin via
+Active path (opt-in Segment continuity): motion-context pin via
 ``director.h3_motion_context`` — previous segment AV tail → next segment
 conditioning, then trim the pinned prefix.
 Tasks: t2v / i2v / fl2v / r2v / v2v / rv2v.
@@ -45,7 +45,7 @@ CONTINUITY_SOURCE_LOOKAHEAD = 8
 # Burn-in after SCAIL lock, discarded on export (timeline-safe anti hold→pop).
 # 00035 still pulsed in exported opening — extend burn-in so pulse stays discarded.
 CONTINUITY_SETTLING_FRAMES = 12
-# Conditioning: mild RGB body bridge (clear-image path; mask ramp caused 花屏).
+# Conditioning: mild RGB body bridge (clear-image path; mask ramp caused screen corruption).
 CONTINUITY_SOURCE_BODY_BRIDGE = 8
 CONTINUITY_SOURCE_BODY_BRIDGE_WEIGHT = 0.40
 CONTINUITY_SOURCE_BODY_BRIDGE_BLUR = 0  # 0 = full RGB lerp in prepend (not lowfreq)
@@ -53,14 +53,14 @@ CONTINUITY_SOURCE_BODY_BRIDGE_BLUR = 0  # 0 = full RGB lerp in prepend (not lowf
 CONTINUITY_FREE_LATENT_WARMSTART = 0.55
 CONTINUITY_FREE_LATENT_WARMSTART_2 = 0.34
 CONTINUITY_FREE_LATENT_WARMSTART_3 = 0.16
-# v13 mask ramp / lock feather → under-denoise 花屏 (user screenshot). Hard lock only.
+# v13 mask ramp / lock feather → under-denoise screen corruption (user screenshot). Hard lock only.
 CONTINUITY_FREE_LATENT_MASK_RAMP = (1.0, 1.0, 1.0)
 CONTINUITY_LOCK_FEATHER_LATENT = 0
 CONTINUITY_LOCK_FEATHER_MASK = 0.0
 CONTINUITY_UNLOCK_FEATHER_LATENT = 0
 CONTINUITY_UNLOCK_START_MASK = 1.0
 CONTINUITY_UNLOCK_INIT_BLEND = 0.0
-# No multiplicative gain / long RGB blend (画面花 / 幻影).
+# No multiplicative gain / long RGB blend (image corruption / ghosting).
 CONTINUITY_SEAM_SOFTEN_MAD = 99.0
 CONTINUITY_SEAM_SOFTEN_FRAMES = 0
 CONTINUITY_SEAM_SOFTEN_WEIGHT = 0.0
@@ -75,7 +75,7 @@ CONTINUITY_OPENING_LUMA_BLEND = 0
 CONTINUITY_OPENING_LUMA_MIN_RATIO = 0.55
 CONTINUITY_OPENING_LUMA_MAX_RATIO = 1.8
 CONTINUITY_OPENING_LUMA_EPSILON = 0.015
-# Concat: additive luma ONLY — body0/hold→pop RGB caused 拖影+一顿一顿 (00035).
+# Concat: additive luma ONLY — body0/hold→pop RGB caused ghosting + stuttery motion (00035).
 CONTINUITY_SEAM_ADD_LUMA_FRAMES = 12
 CONTINUITY_SEAM_ADD_LUMA_MAX = 0.10
 CONTINUITY_BODY0_SEAM_WEIGHT = 0.0
@@ -128,7 +128,7 @@ DEFAULT_CONTINUITY_REDRAW = 0.10
 
 
 def resolve_continuity_mode(timeline: dict | None) -> str:
-    """Global 引导 / 引导+重绘 strategy. Default guide. Ignored when continuity is off."""
+    """Global guide / guide+redraw strategy. Default guide. Ignored when continuity is off."""
     output = (timeline or {}).get("output") if isinstance(timeline, dict) else None
     if not isinstance(output, dict):
         return CONTINUITY_MODE_GUIDE
@@ -146,7 +146,7 @@ def resolve_continuity_mode(timeline: dict | None) -> str:
 
 
 def resolve_continuity_redraw(timeline: dict | None) -> float:
-    """重绘幅度 for 引导+重绘. Ignored in official Guide mode."""
+    """Redraw amount for guide+redraw. Ignored in official Guide mode."""
     from .h3_latent_continue import clamp_seam_min_mask
 
     output = (timeline or {}).get("output") if isinstance(timeline, dict) else None
@@ -165,7 +165,7 @@ def resolve_continuity_redraw(timeline: dict | None) -> float:
 
 
 def resolve_continuity_keep_tail(timeline: dict | None) -> bool:
-    """Keep the align remainder after the pinned head (「保完整」). Default on."""
+    """Keep the align remainder after the pinned head (Keep full). Default on."""
     output = (timeline or {}).get("output") if isinstance(timeline, dict) else None
     if not isinstance(output, dict):
         return True
@@ -212,9 +212,9 @@ def resolve_segment_continuity_from_prev(
     *,
     segment_index: int,
 ) -> bool:
-    """Per-segment「引用上段」flag.
+    """Per-segment Reference previous segment flag.
 
-    Master「段间引导」must also be on (checked by ``is_continuity_active``).
+    Master Segment continuity must also be on (checked by ``is_continuity_active``).
     Missing field defaults to True so existing workflows keep pinning every segment.
     Segment index 0 never pins.
     """
@@ -350,7 +350,7 @@ def match_clip_to_gen_length(clip: torch.Tensor, gen_frames: int) -> torch.Tenso
 
 
 def is_continuity_active(plan: DirectorPlan, seg: SegmentPlan) -> bool:
-    """True only when UI「段间引导」is ON and this segment should pin the previous.
+    """True only when UI Segment continuity is ON and this segment should pin the previous.
 
     When False, the executor must stay on the official MiniMax H3 path
     (stock ImageToVideo / ReferenceToVideo, no motion-context pin/patch/trim).
@@ -397,9 +397,9 @@ def resolve_prev_segment_output(
     if not plan.continuity_enabled:
         return None
     raise ValueError(
-        f"段间连贯：片段 #{seg_index + 1} 需要上一段 #{prev_idx + 1} 的生成结果。"
-        "换源后旧缓存已失效。请先运行上一段，或将其纳入「选择运行」；"
-        "也可关闭「段间引导」后只跑本段。"
+        f"Segment continuity: segment #{seg_index + 1} needs the generated result of previous segment #{prev_idx + 1}. "
+        "The old cache was invalidated after the source changed. Run the previous segment first, or include it in Select to run; "
+        "or turn off Segment continuity and run only this segment."
     )
 
 
@@ -595,7 +595,7 @@ def _adaptive_seam_soften(
     body: torch.Tensor,
     guide: torch.Tensor,
 ) -> torch.Tensor:
-    """Disabled by default — RGB mix toward prev[-1] smeared detail (画面花)."""
+    """Disabled by default — RGB mix toward prev[-1] smeared detail (image corruption)."""
     if (
         body is None
         or guide is None
@@ -627,7 +627,7 @@ def _additive_opening_luma(
 ) -> torch.Tensor:
     """Add the same RGB delta so mean luma eases from guide[-1] → body[n].
 
-    Unlike multiplicative gain, this keeps local contrast (less 画面花).
+    Unlike multiplicative gain, this keeps local contrast (less image corruption).
     Triggers when body[0] disagrees with prev *or* the opening pops, even if
     prev and body[n] already share a similar mean (common SCAIL dark dip).
     """
@@ -758,7 +758,7 @@ def _lowfreq_appearance_pull(
 ) -> torch.Tensor:
     """Keep src detail; absorb guide's low-frequency grade/lighting only.
 
-    Full RGB lerp copies pose edges → 重影 + hold→pop. Low-freq residual
+    Full RGB lerp copies pose edges → ghosting + hold→pop. Low-freq residual
     transfer matches appearance without a second silhouette.
     """
     w = float(weight)
@@ -829,7 +829,7 @@ def match_export_opening_grade(
 ) -> torch.Tensor:
     """Match opening lighting/grade of an exported clip to the previous tail.
 
-    Uses low-frequency residual only so pose edges are not copied (no 重影).
+    Uses low-frequency residual only so pose edges are not copied (no ghosting).
     Applied on per-segment exports because concat seam soften never runs there.
 
     The weights, the low-frequency residual and the clamp are unchanged from the
@@ -886,7 +886,7 @@ def _soften_body0_toward_prev(
 ) -> torch.Tensor:
     """Unilateral ease of body opening toward prev[-1] — no prev-tail rewrite.
 
-    00033 顿感: hard cut / opening brake. Tiny pull on body[0]/[1] restores join
+    00033 jerkiness: hard cut / opening brake. Tiny pull on body[0]/[1] restores join
     softness without painting the next pose into the previous ending.
     Weight scales up slightly when the cut MAD is high.
     """
@@ -981,7 +981,7 @@ def _unfreeze_held_tail(
     """Spread a near-cut freeze across the tail using *only* left's own last frame.
 
     Morphing toward ``next[0]`` (00009) paints the next pose into the previous
-    ending — visible 幻影. Intra-lerp removes the hold without cross-segment mix.
+    ending — visible ghosting. Intra-lerp removes the hold without cross-segment mix.
     """
     if left is None or int(left.shape[0]) < 3 or int(max_frames) <= 0:
         return left
@@ -1559,7 +1559,7 @@ def apply_scail_prefix_to_latent(
             noise_mask[:, :, t] = alpha
 
     # Soft-unlock on free latents disabled (CONTINUITY_UNLOCK_* = 0): mixing prev
-    # latent into free init + mask<1 left body under-denoised → 画面花.
+    # latent into free init + mask<1 left body under-denoised → image corruption.
     unlock_n = min(
         int(CONTINUITY_UNLOCK_FEATHER_LATENT),
         max(0, t_total - t_tail),
@@ -1585,7 +1585,7 @@ def apply_scail_prefix_to_latent(
             noise_mask[:, :, t] = min(1.0, max(0.0, mask_i))
 
     # Warm-start first free latents from last locked; mask stays 1.0 (full denoise).
-    # Partial mask ramp (v13) under-denoised → 花屏; never revisit without A/B.
+    # Partial mask ramp (v13) under-denoised → screen corruption; never revisit without A/B.
     warms = (
         float(CONTINUITY_FREE_LATENT_WARMSTART),
         float(CONTINUITY_FREE_LATENT_WARMSTART_2),
@@ -1733,7 +1733,7 @@ def trim_decoded_for_continuity(
     """Drop SCAIL overlap prefix and keep body length.
 
     Exposure is graded on the previous tail at concat (not on body opening —
-    fading opening gain caused post-seam brightness pump / 一闪一闪 on 00010).
+    fading opening gain caused post-seam brightness pump / flicker on 00010).
     Sequence crossfade against ``prev[-n:]`` is intentionally NOT used.
     """
     # Call-site compat; exposure / soften happen in concat_continuous_chunks.
@@ -1762,7 +1762,7 @@ def concat_continuous_chunks(
     """Concatenate with exposure-only seam fix.
 
     Generation settling burn-in handles flash/pulse. Concat RGB morphs are OFF
-    (00035: body0/hold→pop caused 拖影 and stutter pulses).
+    (00035: body0/hold→pop caused ghosting and stutter pulses).
     """
     del segments
     if not chunks:

@@ -237,7 +237,7 @@ if comfy_io is not None:
                     comfy_io.Combo.Input(
                         "ref_image_size",
                         options=list(REF_IMAGE_SIZE_CHOICES),
-                        display_name="参考图尺寸",
+                        display_name="Reference image size",
                         default="match",
                         tooltip=_REF_IMAGE_SIZE_TOOLTIP,
                     ),

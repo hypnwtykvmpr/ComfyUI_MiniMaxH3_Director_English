@@ -123,7 +123,7 @@ export function listCommonVideoRefs(editor) {
 
 /**
  * Keep group slots from colliding with common indices.
- * - Legacy (all group pics still 图片1…): shift the block up by picOff.
+ * - Legacy (all group pics still Picture 1…): shift the block up by picOff.
  * - Partial collisions (common grew into a group index): bump each colliding
  *   slot to the next free absolute index >= offset.
  */
@@ -138,7 +138,7 @@ function _rebaseIndexedMedia(list, hasFn, offset, maxSlots) {
     if (!hasLow) return { list, changed: false };
     const hasHigh = idxs.some((i) => Number.isFinite(i) && i >= offset);
 
-    // Legacy: entire group still uses 图片1…N → move as a block.
+    // Legacy: entire group still uses Picture 1…N → move as a block.
     if (!hasHigh) {
         return {
             changed: true,
@@ -390,7 +390,7 @@ export function flushBatchPromptInputs(editor) {
     });
 }
 
-/** Flush visible 秒数 inputs into segments before a full card re-render. */
+/** Flush visible seconds inputs into segments before a full card re-render. */
 function flushBatchDurationInputs(editor) {
     const list = editor?.batchList;
     if (!list) return;
@@ -471,9 +471,9 @@ export const IMAGE_BATCH_STYLES = `
 /* Default cap; batch-fill mode overrides via .bd-wrap.bd-batch-fill + JS max-height. */
 .bd-batch-list{display:flex;flex-direction:column;gap:8px;width:100%;max-height:640px;overflow-y:auto;padding-right:2px;min-height:0}
 .bd-batch-card{background:linear-gradient(165deg,#1a1a1a 0%,#141414 55%,#111 100%);border:1px solid #2c2c2c;border-radius:10px;padding:12px 14px;display:grid;gap:10px;align-items:stretch;box-shadow:inset 0 1px 0 rgba(255,255,255,.03);flex:0 0 auto}
-/* t2v: 提示词为主，预览收成右侧窄栏 */
+/* t2v: prompt is primary; the preview shrinks to a right sidebar */
 .bd-batch-card.bd-batch-plain{grid-template-columns:minmax(0,1fr) minmax(132px,168px)}
-/* i2v / r2i: 源图或参考 | 提示词 | 窄预览 */
+/* i2v / r2i: source or reference image | prompt | narrow preview */
 .bd-batch-card.bd-batch-source,.bd-batch-card.bd-batch-refs:not(.bd-batch-r2v){grid-template-columns:minmax(220px,280px) minmax(0,1fr) minmax(132px,168px)}
 .bd-batch-plain .bd-batch-head,.bd-batch-source .bd-batch-head,.bd-batch-fl2v .bd-batch-head,.bd-batch-refs:not(.bd-batch-r2v) .bd-batch-head{padding-bottom:2px;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:2px}
 .bd-batch-plain .bd-batch-head b,.bd-batch-source .bd-batch-head b,.bd-batch-fl2v .bd-batch-head b,.bd-batch-refs:not(.bd-batch-r2v) .bd-batch-head b{color:#f0f0f0;font-size:12px;font-weight:650}
@@ -707,14 +707,14 @@ export function mountImageBatchPanel(root) {
     panel.dataset.r = "batch-panel";
     panel.innerHTML = `
         <div class="bd-batch-toolbar">
-            <button type="button" class="bd-btn bd-btn-primary" data-a="batch-add" data-i18n="batch.addPromptGroup">+ 添加分组</button>
-            <button type="button" class="bd-btn bd-batch-run-select hidden" data-a="batch-run-select" data-i18n="toolbar.runSelect" data-i18n-title="tooltip.batchRunSelect">选择运行</button>
+            <button type="button" class="bd-btn bd-btn-primary" data-a="batch-add" data-i18n="batch.addPromptGroup">+ Add group</button>
+            <button type="button" class="bd-btn bd-batch-run-select hidden" data-a="batch-run-select" data-i18n="toolbar.runSelect" data-i18n-title="tooltip.batchRunSelect">Select to run</button>
             <label class="bd-batch-run-all hidden" data-r="batch-run-all-wrap" data-i18n-title="tooltip.runSelectAll">
                 <input type="checkbox" data-r="batch-run-all-cb">
-                <span data-i18n="toolbar.selectAll">全选</span>
+                <span data-i18n="toolbar.selectAll">Select all</span>
             </label>
-            <button type="button" class="bd-btn" data-a="batch-detail-mode" data-i18n="toolbar.batchDetailSolo" data-i18n-title="tooltip.batchDetailSolo">单显模式</button>
-            <span class="bd-meta" data-r="batch-hint" data-i18n="batch.hint.defaultImage">每组生成 1 张图片</span>
+            <button type="button" class="bd-btn" data-a="batch-detail-mode" data-i18n="toolbar.batchDetailSolo" data-i18n-title="tooltip.batchDetailSolo">Solo mode</button>
+            <span class="bd-meta" data-r="batch-hint" data-i18n="batch.hint.defaultImage">One image per group</span>
         </div>
         <div class="bd-batch-i2v-notice" data-r="batch-i2v-notice"></div>
         <div class="bd-batch-picker" data-r="batch-picker"></div>
@@ -765,7 +765,7 @@ function cloneRefs(refs) {
 }
 
 /** Copy global.refs into batch segments that have no refs (r2i only).
- *  r2v keeps refs on timeline.global as shared「公共参数」merged at plan time. */
+ *  r2v keeps refs on timeline.global as shared common params merged at plan time. */
 export function migrateGlobalRefsIntoBatchSegments(editor, taskKey) {
     const key = resolveTaskKey(taskKey || editor.getTaskKey?.() || "");
     if (key !== "r2i") return false;
@@ -2586,7 +2586,7 @@ function appendBatchCard(list, editor, seg, index, ctx) {
             taskRow.appendChild(taskSel);
             head.appendChild(taskRow);
         }
-        // Per-segment continuity (master「段间引导」must be on; skip segment 1).
+        // Per-segment continuity (master Segment continuity must be on; skip segment 1).
         const masterCont = isContinuityMasterEnabled(editor.timeline?.output);
         if (masterCont && index > 0 && isVideo) {
             const contLabel = document.createElement("label");
@@ -2833,7 +2833,7 @@ function appendBatchCard(list, editor, seg, index, ctx) {
                 const live = (editor.timeline.segments || []).find((s) => s?.id && s.id === segId)
                     || editor.timeline.segments?.[segIndex]
                     || seg;
-                // Absolute indices: common 图片1…N + group 图片N+1… (no renumber clash).
+                // Absolute indices: common Picture 1…N + group Picture N+1… (no renumber clash).
                 return {
                     refs: on ? mergeMediaByIndex(g.refs || [], live.refs || []) : (live.refs || []),
                     audios: on
@@ -3057,7 +3057,7 @@ export function contentDomWidgetMinHeight(editor) {
  *
  * IMPORTANT: never assign widget.computeSize. If computeSize exists, LiteGraph
  * treats the widget as fixed-height and never distributes free space when the
- * user drags the node taller — 素材组 stays short with a void below.
+ * user drags the node taller — asset group stays short with a void below.
  * Use computeLayoutSize + getMinHeight/getMaxHeight only.
  */
 export function bindDomWidgetContentComputeSize(editor) {
@@ -3085,9 +3085,9 @@ export function bindDomWidgetContentComputeSize(editor) {
 }
 
 /**
- * Grow the 素材组 list into leftover node height when the user drags the Director taller.
+ * Grow the asset group list into leftover node height when the user drags the Director taller.
  * Uses the widget slot height for *layout only* — never writes it into getMinHeight
- * (that was the infinite-growth / 公共参数挤压 bug).
+ * (that was the infinite-growth / common params squeeze bug).
  *
  * @param {{ settle?: boolean }} [opts] settle=false skips rAF (progress path); default one rAF.
  */
@@ -3127,7 +3127,7 @@ export function syncBatchPanelFillHeight(editor, opts = {}) {
         const slotH = Math.max(0, rawSlot - inset);
 
         // Fill the allocated widget box. Prefer % so we never paint shorter than parent
-        // (pixel maxHeight < computed was the "blank below 素材组" bug after EXTRA clamp).
+        // (pixel maxHeight < computed was the "blank below asset group" bug after EXTRA clamp).
         host.style.height = "";
         wrap.style.height = "";
         wrap.style.minHeight = "0";

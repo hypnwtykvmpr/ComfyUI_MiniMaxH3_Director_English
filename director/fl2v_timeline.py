@@ -4,7 +4,7 @@ Preferred schema: timeline.shots[] — each shot is one sampling group:
   - startImage (optional): image0 first keyframe
   - endImage (optional): image1 last keyframe; official FL2VA allows last-only
   - neither start nor end: text-to-video on the same fl2va path (prompt only;
-    with「段间引导」+「引用上段」the previous tail is pinned as motion context)
+    with Segment continuity + Reference previous segment the previous tail is pinned as motion context)
   - durationSec: per-shot length; totalFrames ≈ sum of shot frames
 
 Legacy flat keyframes/segments (isStartFrame / isEndFrame) still supported via
@@ -126,6 +126,12 @@ def _normalize_shots(raw_shots: list | None, *, frame_rate: float = 24.0) -> lis
 # Hard locks for every fl2v shot (re-applied after PE). Community cue words:
 # MiniMax H3 locks first/last via MiniMaxH3ImageToVideo keyframe latents.
 # Prompt text reinforces continuity; avoid Bernini image0/image1 tokens.
+# NOT TRANSLATABLE. These six constants are prompt text sent to MiniMax H3
+# itself, not UI copy. They must stay byte-identical to upstream: the model was
+# tuned on these exact Chinese cue words, and web/js/minimax_fl2v.js strips
+# these literals to stop wraps stacking across re-runs. Translating them breaks
+# generation and the JS strip contract at once.
+# Pinned by tests/test_model_facing_strings.py.
 FLF_PROMPT_PREFIX = (
     "完全保持首尾帧。"
     "视频第一帧必须与给定首帧画面一致，最后一帧必须与给定尾帧画面一致；"
@@ -186,7 +192,7 @@ def _strip_fl2v_wraps(text: str) -> str:
 
 
 def _sanitize_fl2v_body(text: str) -> str:
-    """Rewrite soft「参考」wording that weakens first/last-frame locking."""
+    """Rewrite soft reference wording that weakens first/last-frame locking."""
     if not text:
         return text
     replacements = (
@@ -216,6 +222,9 @@ def _sanitize_fl2v_body(text: str) -> str:
         out = out.replace(old, new)
     # Drop duplicated lock lines already present in the body (prefix/suffix will re-add).
     for marker in (
+        "Completely preserve the first and last frames.",
+        "Completely preserve the first frame.",
+        "Completely preserve the last frame.",
         "完全保持首尾帧。",
         "完全保持首帧。",
         "视频开始完全按照image0的画面，不修改，视频结束完全保持image1的画面。",
@@ -234,7 +243,12 @@ def _sanitize_fl2v_body(text: str) -> str:
 def fl2v_prompt_body_only(prompt: str) -> str:
     """Strip hard-lock wraps / PE duplicates; keep only the motion body for UI storage."""
     text = _sanitize_fl2v_body(_strip_fl2v_wraps((prompt or "").strip()))
-    if text.startswith("中间过程："):
+    # The English marker is legacy tolerance, not the emitted form: an earlier
+    # build of this fork wrongly emitted it, so prompts saved then still strip.
+    # Do not remove, and do not "fix" the emitter to match it.
+    if text.startswith("Intermediate process:"):
+        text = text[len("Intermediate process:") :].strip()
+    elif text.startswith("中间过程："):
         text = text[len("中间过程：") :].strip()
     return text
 
@@ -260,6 +274,8 @@ def reinforce_fl2v_prompt(
     else:
         prefix, suffix = I2V_PROMPT_PREFIX, I2V_PROMPT_SUFFIX
     if text:
+        # NOT TRANSLATABLE: model-facing cue, and minimax_fl2v.js strips this
+        # exact literal. See the prompt-constant block above.
         return f"{prefix}{suffix}中间过程：{text}"
     return f"{prefix}{suffix}"
 
@@ -456,7 +472,7 @@ def _expand_shots(keyframes: list[dict]) -> list[dict[str, Any]]:
     """Only isStartFrame clips produce sampling shots.
 
     Pairing rule:
-    - Start+End on the same clip → 首尾同图 (image0=image1=self)
+    - Start+End on the same clip → same start/end image (image0=image1=self)
     - Else walk forward until the next Start (exclusive); first End-only is image1
     - Start with no End → i2v; Start+End → fl2v (sample spans both when End-only)
     """
@@ -483,7 +499,7 @@ def _expand_shots(keyframes: list[dict]) -> list[dict[str, Any]]:
                     }
                 )
             else:
-                # Self-paired 首尾同图: sample this clip alone.
+                # Self-paired same start/end image: sample this clip alone.
                 shots.append(
                     {
                         "source_index": i,
@@ -564,12 +580,12 @@ def build_fl2v_director_plan(
     if not shots:
         if not keyframes:
             raise ValueError(
-                "fl2v: 请至少添加一组。每组可只写提示词（文生），或上传首帧和/或尾帧。"
+                "fl2v: Please add at least one group. Each group can be prompt-only (text-to-video), or upload a start and/or end frame."
             )
         shots = _expand_shots(keyframes)
         if not shots:
             raise ValueError(
-                "fl2v: 没有可用的组。请添加一组（可只写提示词，或上传首帧/尾帧）。"
+                "fl2v: No usable group. Please add a group (prompt-only, or upload a start/end frame)."
             )
 
     # runSelection uses shot indices when shots[] is present; else keyframe indices.
@@ -579,8 +595,8 @@ def build_fl2v_director_plan(
     if run_sel is not None:
         if not any(int(s["source_index"]) in run_sel for s in shots):
             raise ValueError(
-                "MiniMax H3 Director: 「选择运行」已开启，但未勾选任何首尾帧组。"
-                "请勾选至少一组再执行。"
+                "MiniMax H3 Director: Select to run is on, but no first-last frame groups are checked. "
+                "Check at least one group before running."
             )
 
     output_block = timeline.get("output") or {}
@@ -719,12 +735,12 @@ def build_fl2v_director_plan(
 
     if not segments:
         raise ValueError(
-            "fl2v: 没有可运行的组。请添加一组（可只写提示词，或上传首帧/尾帧）。"
+            "fl2v: No runnable group. Please add a group (prompt-only, or upload a start/end frame)."
         )
     if run_sel is not None and not selected_plan_indices:
         raise ValueError(
-            "MiniMax H3 Director: 「选择运行」已开启，但未勾选任何首尾帧组。"
-            "请勾选至少一组再执行。"
+            "MiniMax H3 Director: Select to run is on, but no first-last frame groups are checked. "
+            "Check at least one group before running."
         )
 
     source_video = torch.full((len(segments), 16, 16, 3), 0.5, dtype=torch.float32)

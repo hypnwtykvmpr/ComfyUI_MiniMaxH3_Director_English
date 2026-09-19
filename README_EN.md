@@ -3,8 +3,6 @@
 Multi-segment AV timeline director for **official ComfyUI MiniMax-H3**.  
 Repository: [AIMixer/ComfyUI_MiniMaxH3_Director](https://github.com/AIMixer/ComfyUI_MiniMaxH3_Director)
 
-**中文文档** → [README.md](README.md)
-
 ![MiniMaxH3Director workflow screenshot](docs/screenshot.png)
 
 ## Features
@@ -122,7 +120,7 @@ This repo ships examples under `example_workflows/`:
 | `minimax_h3_director_rv2v.json` | rv2v | **ref2va** | Source + reference images/audio |
 | `minimax_h3_director_external_groups_i2v.json` | fl2v | fl2va | External Group×2 → Combine → `i2v_groups` |
 | `minimax_h3_director_external_groups_r2v.json` | r2v | **ref2va** | External Group×N → Combine → `r2v_groups` |
-| `minimax_h3_director_二采_加速.json` | r2v | **ref2va** | Refine second sample (SIGMAS + H3 latent); `images` and `images_pre_refine` each save a clip |
+| `minimax_h3_director_refine_second_pass.json` | r2v | **ref2va** | Refine second sample (SIGMAS + H3 latent); `images` and `images_pre_refine` each save a clip |
 
 ### Recommended model files
 
@@ -182,7 +180,7 @@ This repo ships examples under `example_workflows/`:
 8. Upscale default is `h3_latent`: pick the 3D weights in Refine (dropdown under `upscale_method`; also shown for `mode=latent_upscale`). Put the file in `ComfyUI/models/latent_upscale_models/`. `lanczos` can take optional `upscale_model` (RealESRGAN etc.); or use `nvidia_rtx_vsr`
 9. Segment export with `passes>1` also writes `seg_XXXX_pN.mp4` per round; export-all still only keeps first-pass and the final clip
 
-Example: `example_workflows/minimax_h3_director_二采_加速.json`
+Example: `example_workflows/minimax_h3_director_refine_second_pass.json`
 
 ### External multi-group wiring
 

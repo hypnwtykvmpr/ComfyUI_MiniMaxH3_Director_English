@@ -465,9 +465,9 @@
         "Node name for S&R": "MiniMaxH3Director"
       },
       "widgets_values": [
-        "v2v — 视频转视频(Video to Video)",
+        "v2v — Video to Video",
         "Keep the scene from <Video 1>. Soft cinematic relight, gentle camera push-in, light rain. Preserve subject identity and framing. Audio: soft rain and distant city ambience. No text or logos.",
-        "采样设置",
+        "Sampling settings",
         1.0,
         42,
         "randomize",
@@ -476,14 +476,14 @@
         480,
         864,
         124,
-        "{\"version\": 4, \"editMode\": \"global\", \"timelineMode\": \"video\", \"totalFrames\": 124, \"frameRate\": 24.0, \"width\": 864, \"height\": 480, \"refMaxSize\": 864, \"output\": {\"mode\": \"fixed\", \"longEdge\": 864, \"width\": 864, \"height\": 480, \"maxExportFrames\": 0, \"exportMode\": \"all\", \"continuityEnabled\": false, \"continuityOverlapFrames\": 9}, \"videoClips\": [], \"video\": {\"fileName\": \"\", \"videoFile\": \"\", \"subfolder\": \"\", \"type\": \"input\", \"frames\": [], \"frameMap\": []}, \"global\": {\"taskType\": \"v2v — 视频转视频(Video to Video)\", \"prompt\": \"Keep the scene from <Video 1>. Soft cinematic relight, gentle camera push-in, light rain. Preserve subject identity and framing. Audio: soft rain and distant city ambience. No text or logos.\", \"refs\": [], \"referenceVideo\": {}, \"continuousReference\": false, \"genImage\": {\"imageFile\": \"\"}}, \"segments\": [{\"id\": \"s0\", \"start\": 0, \"length\": 124, \"frameCount\": 124, \"durationSec\": 5, \"prompt\": \"\", \"taskType\": \"\", \"refs\": [], \"referenceVideo\": {}, \"genImage\": {\"imageFile\": \"\"}, \"negativePrompt\": \"\"}], \"gen\": {\"defaultFrameCount\": 124}, \"runSelectEnabled\": false, \"runSelection\": []}",
-        "高级采样 Advanced",
+        "{\"version\": 4, \"editMode\": \"global\", \"timelineMode\": \"video\", \"totalFrames\": 124, \"frameRate\": 24.0, \"width\": 864, \"height\": 480, \"refMaxSize\": 864, \"output\": {\"mode\": \"fixed\", \"longEdge\": 864, \"width\": 864, \"height\": 480, \"maxExportFrames\": 0, \"exportMode\": \"all\", \"continuityEnabled\": false, \"continuityOverlapFrames\": 9}, \"videoClips\": [], \"video\": {\"fileName\": \"\", \"videoFile\": \"\", \"subfolder\": \"\", \"type\": \"input\", \"frames\": [], \"frameMap\": []}, \"global\": {\"taskType\": \"v2v — Video to Video\", \"prompt\": \"Keep the scene from <Video 1>. Soft cinematic relight, gentle camera push-in, light rain. Preserve subject identity and framing. Audio: soft rain and distant city ambience. No text or logos.\", \"refs\": [], \"referenceVideo\": {}, \"continuousReference\": false, \"genImage\": {\"imageFile\": \"\"}}, \"segments\": [{\"id\": \"s0\", \"start\": 0, \"length\": 124, \"frameCount\": 124, \"durationSec\": 5, \"prompt\": \"\", \"taskType\": \"\", \"refs\": [], \"referenceVideo\": {}, \"genImage\": {\"imageFile\": \"\"}, \"negativePrompt\": \"\"}], \"gen\": {\"defaultFrameCount\": 124}, \"runSelectEnabled\": false, \"runSelection\": []}",
+        "Advanced sampling Advanced",
         25,
         "res_multistep",
         "simple",
         12.0,
         3.0,
-        "性能 Performance",
+        "Performance Performance",
         true,
         false
       ]
@@ -630,7 +630,7 @@
           "links": null
         }
       ],
-      "title": "Director 运行报告",
+      "title": "Director run report",
       "properties": {
         "Node name for S&R": "PreviewAny"
       },
@@ -822,7 +822,7 @@
   "groups": [
     {
       "id": 1,
-      "title": "模型加载 (MiniMax H3)",
+      "title": "Model loading (MiniMax H3)",
       "bounding": [
         -760,
         40,
@@ -846,7 +846,7 @@
     },
     {
       "id": 3,
-      "title": "输出",
+      "title": "Output",
       "bounding": [
         860,
         40,

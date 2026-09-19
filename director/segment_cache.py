@@ -293,13 +293,13 @@ def _safe_unlink(path: Path) -> bool:
 
 
 def _atomic_publish(tmp: Path, dest: Path) -> None:
-    """Move ``tmp`` 鈫?``dest``, tolerating clouds that block same-name overwrite."""
+    """Move ``tmp`` → ``dest``, tolerating clouds that block same-name overwrite."""
     try:
         os.replace(tmp, dest)
         return
     except OSError:
         pass
-    # Some cloud mounts reject overwrite of an existing name 鈥?remove then rename.
+    # Some cloud mounts reject overwrite of an existing name — remove then rename.
     _safe_unlink(dest)
     try:
         os.replace(tmp, dest)
@@ -639,7 +639,7 @@ def load_segment_cache(
 ) -> torch.Tensor | None:
     """Load cached segment frames.
 
-    ``allow_stale=True``: used for「选择运行」+「全部导出」fill of unselected
+    ``allow_stale=True``: used for Select to run + Export all fill of unselected
     segments. Prefer the last render on disk over blank/gray source placeholders
     when the fingerprint drifted (pipeline bump, minor plan churn). A different
     source video is never treated as usable stale — callers then passthrough
@@ -825,7 +825,7 @@ def load_first_pass_frames_stale(
 
     Stale-tolerant counterpart of :func:`load_first_pass_cache`: fingerprint
     drift (different seed, sampling-knob churn) does NOT invalidate the fill,
-    so「选择运行」re-roll previews merge all-first-pass frames instead of
+    so Select to run re-roll previews merge all-first-pass frames instead of
     mixing a fresh first pass with cached refined renders. A different source
     video still rejects (same rule as the final-cache fill). Never raises.
 
@@ -953,7 +953,7 @@ def prune_segment_cache(node_id: str | None, valid_indices) -> None:
     """Remove ``seg_XXXX.*`` files whose index is no longer on the timeline.
 
     Does not create the cache dir. Uses all current segment indices (not
-    「选择运行」), so unselected slots keep merge/export fill. Never raises.
+    Select to run), so unselected slots keep merge/export fill. Never raises.
     """
     if not node_id:
         return
@@ -1113,7 +1113,7 @@ def _external_selected_indices(
     witness: dict[str, Any],
     count: int,
 ) -> frozenset[int] | None:
-    """「选择运行」selection out of the witness, using the run's own parser."""
+    """Extract the run-selection ("Select to run") from the witness, using the run's own parser."""
     sel = witness.get("sel")
     if not isinstance(sel, dict) or not sel.get("on"):
         return None
@@ -1149,7 +1149,7 @@ def _external_segment_diff(stored_record: Any, expected_record: Any) -> list[str
     stored_facets = stored_record.get("facets")
     expected_facets = expected_record.get("facets")
     # Execute fallback records have no graph facets. Comparing them to the
-    # panel's full witness would report every segment as「外接组接线」forever.
+    # panel's full witness would report every segment as "External group wiring" forever.
     if isinstance(stored_facets, dict) and stored_facets and isinstance(expected_facets, dict):
         for facet, diff_key in _WITNESS_FACET_DIFF_KEYS.items():
             if facet == "timeline" or diff_key in keys:
@@ -1313,7 +1313,7 @@ def _inspect_external_group_cache(
                         # the previous clip's tail, so the range has to shift and
                         # the segment must be re-sampled — but it is NOT this
                         # group's duration that changed, so it gets its own label
-                        # instead of blaming「外接组时长」on an untouched group.
+                        # instead of blaming "External group duration" on an untouched group.
                         own_dur_moved = (
                             isinstance(stored_record, dict)
                             and isinstance(record, dict)
@@ -1382,7 +1382,7 @@ def inspect_first_pass_cache(
 ) -> dict[str, Any]:
     """Inspect first-pass cache files without loading their tensor payloads.
 
-    Always walks the whole timeline so「选择运行」unselected slots stay visible.
+    Always walks the whole timeline so Select to run unselected slots stay visible.
     ``final_cached_count`` is file presence only (``seg_XXXX.pt``), not a
     fingerprint match — Refine knobs are not on this status request.
 
@@ -1523,8 +1523,8 @@ def clear_segment_cache(node_id: str | None, kind: str = "final") -> int:
     """Delete cached segment files for this Director node.
 
     ``kind``:
-      - ``first_pass``: only ``seg_XXXX.pre.*`` (一采)
-      - ``final``: everything except ``.pre.*`` (成片 / 二采，含 ``.audio.pt``)
+      - ``first_pass``: only ``seg_XXXX.pre.*`` (first pass)
+      - ``final``: everything except ``.pre.*`` (final / second pass, incl. ``.audio.pt``)
       - ``all``: both
 
     Never creates the cache dir. Returns the number of files removed.
